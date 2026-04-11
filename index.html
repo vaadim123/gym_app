@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v1.9</title>
+<title>Workout v2.0</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v1.9';
+const VERSION = 'v2.0';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1032,7 +1032,7 @@ function App() {
                       <button onClick={() => setConfirmModal({ type: 'log', key: date })} style={{ background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 8, padding: '5px 10px', color: C.red, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>🗑</button>
                     </div>
                     {p?.exercises.map((ex, i) => {
-                      const doneSets = (log.sets?.[i] || []).filter(s => s.weight || s.reps || s.done);
+                      const doneSets = (log.sets?.[i] || []).filter(s => s.weight);
                       const hint = log.hints?.[ex.id] || null;
                       if (doneSets.length === 0 && !hint) return null;
                       return (
