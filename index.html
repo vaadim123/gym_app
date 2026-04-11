@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v2.0</title>
+<title>Workout v2.1</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v2.0';
+const VERSION = 'v2.1';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -138,6 +138,45 @@ const ls = {
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   del: (k) => { try { localStorage.removeItem(k); } catch {} },
 };
+
+// ─── GITHUB SYNC ──────────────────────────────────────────────────────────────
+const SYNC_KEYS = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log'];
+
+async function githubSave(token, owner, repo) {
+  const data = {};
+  SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+  
+  // Get current file SHA (needed for update)
+  let sha = null;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (r.ok) { const j = await r.json(); sha = j.sha; }
+  } catch {}
+  
+  const body = { message: 'sync data', content };
+  if (sha) body.sha = sha;
+  
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
+    method: 'PUT',
+    headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return res.ok;
+}
+
+async function githubLoad(token, owner, repo) {
+  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
+    headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+  });
+  if (!r.ok) return false;
+  const j = await r.json();
+  const data = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+  SYNC_KEYS.forEach(k => { if (data[k]) localStorage.setItem(k, data[k]); });
+  return true;
+}
 
 // ─── WEIGHT CHART ─────────────────────────────────────────────────────────────
 function WeightChart({ weightLog, days }) {
@@ -378,6 +417,83 @@ function EditPlanModal({ planKey, plan, onSave, onClose }) {
           style={{ width: '100%', padding: 14, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           💾 Зберегти зміни
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── GITHUB SYNC MODAL ────────────────────────────────────────────────────────
+function GitHubSyncModal({ onClose }) {
+  const [token, setToken] = useState(() => localStorage.getItem('gh_token') || '');
+  const [owner, setOwner] = useState(() => localStorage.getItem('gh_owner') || '');
+  const [repo, setRepo] = useState(() => localStorage.getItem('gh_repo') || '');
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const save = () => {
+    localStorage.setItem('gh_token', token);
+    localStorage.setItem('gh_owner', owner);
+    localStorage.setItem('gh_repo', repo);
+  };
+
+  const handleSave = async () => {
+    if (!token || !owner || !repo) { setStatus({ ok: false, msg: 'Заповни всі поля' }); return; }
+    save(); setLoading(true); setStatus(null);
+    const ok = await githubSave(token, owner, repo);
+    setLoading(false);
+    setStatus({ ok, msg: ok ? '✓ Збережено в GitHub!' : '✗ Помилка. Перевір токен і назву репо.' });
+  };
+
+  const handleLoad = async () => {
+    if (!token || !owner || !repo) { setStatus({ ok: false, msg: 'Заповни всі поля' }); return; }
+    save(); setLoading(true); setStatus(null);
+    const ok = await githubLoad(token, owner, repo);
+    setLoading(false);
+    if (ok) { setStatus({ ok: true, msg: '✓ Завантажено! Перезавантаж сторінку.' }); }
+    else { setStatus({ ok: false, msg: '✗ Файл не знайдено. Спочатку збережи дані.' }); }
+  };
+
+  const inputStyle = { width: '100%', background: '#0d0d1a', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: '10px 12px', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box', marginBottom: 10 };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#13131f', border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2 }}>СИНХРОНІЗАЦІЯ</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 2 }}>☁️ GitHub Sync</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
+        </div>
+
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 16, lineHeight: 1.6, background: '#0d0d1a', padding: 12, borderRadius: 8 }}>
+          Дані зберігаються як файл <b style={{color: C.orangeL}}>data.json</b> у твоєму репо.<br/>
+          Токен потрібен з правом <b style={{color: C.orangeL}}>repo</b>.
+        </div>
+
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>GITHUB TOKEN</div>
+        <input value={token} onChange={e => setToken(e.target.value)} placeholder="ghp_xxxxxxxxxxxx" type="password" style={inputStyle} />
+
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>ВЛАСНИК РЕПО (логін)</div>
+        <input value={owner} onChange={e => setOwner(e.target.value)} placeholder="vaadim123" style={inputStyle} />
+
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>НАЗВА РЕПО</div>
+        <input value={repo} onChange={e => setRepo(e.target.value)} placeholder="gym_app" style={inputStyle} />
+
+        {status && (
+          <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 12, background: status.ok ? C.greenBg : C.redBg, border: `1px solid ${status.ok ? C.greenBorder : C.redBorder}`, fontSize: 13, color: status.ok ? C.green : C.red }}>
+            {status.msg}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={handleLoad} disabled={loading} style={{ flex: 1, padding: 14, background: '#1a1a2e', border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            {loading ? '...' : '⬇️ Завантажити'}
+          </button>
+          <button onClick={handleSave} disabled={loading} style={{ flex: 1, padding: 14, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            {loading ? '...' : '⬆️ Зберегти'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -694,6 +810,7 @@ function App() {
   const [dateOverride, setDateOverride] = useState(null);
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [showSync, setShowSync] = useState(false);
   const [goals, setGoals] = useState(() => ls.get('wt_goals') || { start: 99, goal: 85 });
   const [showGoalEdit, setShowGoalEdit] = useState(false);
   const [selDay, setSelDay] = useState(() => {
@@ -826,6 +943,7 @@ function App() {
       {editModal && <EditPlanModal planKey={editModal} plan={plan[editModal]} onSave={(key, p) => setPlan(pl => ({ ...pl, [key]: p }))} onClose={() => setEditModal(null)} />}
       {showWeightModal && <WeightLogModal weightLog={weightLog} todayK={today} onSave={(d, v) => setWeightLog(wl => ({ ...wl, [d]: v }))} onClose={() => setShowWeightModal(false)} />}
       {showTransfer && <DataTransferModal onClose={() => setShowTransfer(false)} />}
+      {showSync && <GitHubSyncModal onClose={() => setShowSync(false)} />}
       {confirmModal && (
         <Confirm
           msg={confirmModal.type === 'log' ? 'Видалити це тренування?' : 'Очистити підхід?'}
@@ -852,6 +970,9 @@ function App() {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button onClick={showDebug} style={{ background: 'none', border: '1px solid #ff6b35', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', fontSize: 10, color: '#ff6b35' }}>
               🔍
+            </button>
+            <button onClick={() => setShowSync(true)} style={{ background: 'none', border: `1px solid ${C.greenBorder}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
+              <span style={{ fontSize: 16 }}>☁️</span>
             </button>
             <button onClick={() => setShowTransfer(true)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
               <span style={{ fontSize: 18 }}>⇄</span>
