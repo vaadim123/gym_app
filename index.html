@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v1.8</title>
+<title>Workout v1.9</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v1.8';
+const VERSION = 'v1.9';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -765,7 +765,7 @@ function App() {
       if (log.dayType === dayType) {
         const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
         if (exIdx !== -1) {
-          const doneSets = (log.sets?.[exIdx] || []).filter(s => s.done && s.weight);
+          const doneSets = (log.sets?.[exIdx] || []).filter(s => s.weight);
           if (doneSets.length > 0) {
             return { date, sets: doneSets, hint: (hintsLog[dayType] || {})[exId] || null };
           }
