@@ -7,1177 +7,596 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v2.2</title>
+<title>Workout v3.0</title>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
-  input, button { font-family: 'Courier New', monospace; -webkit-appearance: none; outline: none; }
-  ::-webkit-scrollbar { display: none; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;background:#0a0a0f;font-family:'Courier New',monospace;color:#e8e6e0;overscroll-behavior:none;-webkit-text-size-adjust:none}
+input,button,textarea{font-family:'Courier New',monospace;-webkit-appearance:none;outline:none}
+::-webkit-scrollbar{display:none}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-<script type="text/babel">
-const { useState, useEffect, useRef } = React;
-const VERSION = 'v2.2';
+<script>
+'use strict';
+var _R=React,h=_R.createElement,useState=_R.useState,useEffect=_R.useEffect,useRef=_R.useRef;
+var VERSION='v3.0';
+var C={bg:'#0a0a0f',card:'#1a1a2e',inner:'#0d0d1a',border:'#2a2a3e',text:'#e8e6e0',muted:'#5a5a7a',dim:'#3a3a5a',orange:'#ff6b35',orangeL:'#ff9f1c',green:'#4aff7a',greenBg:'#1a3a1a',greenBorder:'#2a5a2a',red:'#ff6b6b',redBg:'#3a1a1a',redBorder:'#5a2a2a'};
+var DEFAULT_PLAN={
+  A:{name:'Понеділок — 💪 Груди + Трицепс',emoji:'💪',exercises:[
+    {id:'A0',name:'Жим штанги лежачи',sets:4,reps:'8-10',rest:'90 сек'},
+    {id:'A1',name:'Жим гантелей під кутом 30°',sets:3,reps:'10-12',rest:'75 сек'},
+    {id:'A2',name:'Зведення в кросовері',sets:3,reps:'12-15',rest:'60 сек'},
+    {id:'A3',name:'Французький жим зі штангою',sets:3,reps:'10-12',rest:'75 сек'},
+    {id:'A4',name:'Жим вниз на блоці',sets:3,reps:'12-15',rest:'60 сек'},
+    {id:'A5',name:'Скручування (верхній прес)',sets:3,reps:'20',rest:'45 сек'},
+    {id:'A6',name:'Велосипед (косі)',sets:3,reps:'20',rest:'45 сек'},
+    {id:'A7',name:'Планка',sets:3,reps:'45 сек',rest:'45 сек'}]},
+  B:{name:'Середа — 🏋️ Спина + Біцепс',emoji:'🏋️',exercises:[
+    {id:'B0',name:'Підтягування / тяга верхнього блоку',sets:4,reps:'8-10',rest:'90 сек'},
+    {id:'B1',name:'Тяга штанги в нахилі',sets:4,reps:'8-10',rest:'90 сек'},
+    {id:'B2',name:'Горизонтальна тяга блоку',sets:3,reps:'12',rest:'75 сек'},
+    {id:'B3',name:'Підйом штанги на біцепс',sets:3,reps:'10-12',rest:'60 сек'},
+    {id:'B4',name:'Молоткові згинання з гантелями',sets:3,reps:'12',rest:'60 сек'},
+    {id:'B5',name:'Підйом ніг лежачи (нижній прес)',sets:3,reps:'15',rest:'45 сек'},
+    {id:'B6',name:'Зворотні скручування',sets:3,reps:'15',rest:'45 сек'},
+    {id:'B7',name:'Планка з чергуванням ніг',sets:3,reps:'12 на ногу',rest:'45 сек'}]},
+  C:{name:"П'ятниця — 🦵 Ноги + Плечі",emoji:'🦵',exercises:[
+    {id:'C0',name:'Присідання зі штангою',sets:4,reps:'8-10',rest:'2 хв'},
+    {id:'C1',name:'Румунська тяга',sets:3,reps:'10-12',rest:'90 сек'},
+    {id:'C2',name:'Жим ногами в тренажері',sets:3,reps:'12-15',rest:'75 сек'},
+    {id:'C3',name:'Жим гантелей над головою (сидячи)',sets:4,reps:'10-12',rest:'75 сек'},
+    {id:'C4',name:'Розведення гантелей в сторони',sets:3,reps:'15',rest:'60 сек'},
+    {id:'C5',name:'Тяга до підборіддя',sets:3,reps:'12',rest:'60 сек'},
+    {id:'C6',name:'Скручування на римській лавці',sets:3,reps:'15-20',rest:'45 сек'},
+    {id:'C7',name:'Mountain climbers',sets:3,reps:'30 сек',rest:'30 сек'},
+    {id:'C8',name:'Бічна планка',sets:3,reps:'35 сек/сторону',rest:'30 сек'}]}
+};
+var WEEK=['A','rest','B','rest','C','rest','rest'];
+var DAY_NAMES=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+var EMOJIS=['💪','🏋️','🦵','🔥','🏃','🤸','⚡','🎯','🧘','🥊'];
+var SYNC_KEYS=['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log'];
 
-// DEBUG: показати що в localStorage
-function showDebug() {
-  const keys = ['wt_logs', 'wt_current', 'wt_hints_log', 'wt_goals'];
-  let msg = '';
-  keys.forEach(k => {
-    const v = localStorage.getItem(k);
-    if (v) {
-      try {
-        const parsed = JSON.parse(v);
-        if (k === 'wt_logs') {
-          msg += 'wt_logs keys: ' + Object.keys(parsed).join(', ') + '\n';
-          Object.entries(parsed).forEach(([date, log]) => {
-            const sets = log.sets || {};
-            const totalDone = Object.values(sets).flat().filter(s => s && s.done).length;
-            msg += '  ' + date + ' dayType=' + log.dayType + ' doneSets=' + totalDone + '\n';
-            // Show first exercise sets
-            if (sets[0]) {
-              msg += '  sets[0]: ' + JSON.stringify(sets[0]).slice(0,100) + '\n';
-            }
-          });
-        } else if (k === 'wt_current') {
-          const sets = parsed.sets || {};
-          const filled = Object.entries(sets).filter(([,v]) => v.weight || v.reps || v.done).length;
-          msg += 'wt_current: date=' + parsed.date + ' day=' + parsed.day + ' filledSets=' + filled + '\n';
-          // Show sample
-          const sample = Object.entries(sets).slice(0,3);
-          sample.forEach(([k,v]) => { msg += '  ' + k + ': ' + JSON.stringify(v) + '\n'; });
-        } else {
-          msg += k + ': ' + JSON.stringify(parsed).slice(0, 100) + '\n';
-        }
-      } catch(e) { msg += k + ': parse error\n'; }
-    } else {
-      msg += k + ': (empty)\n';
-    }
-  });
-  alert(msg || 'localStorage порожній');
+function todayKey(){return new Date().toISOString().split('T')[0];}
+function uid(){return Math.random().toString(36).slice(2,8);}
+function isUrl(s){try{new URL(s);return true;}catch(e){return false;}}
+function restSec(s){if(!s)return 60;if(s.includes('2 хв'))return 120;if(s.includes('90'))return 90;if(s.includes('75'))return 75;if(s.includes('60'))return 60;if(s.includes('45'))return 45;return 60;}
+var ls={
+  get:function(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}},
+  set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}},
+  del:function(k){try{localStorage.removeItem(k);}catch(e){}},
+};
+
+// GitHub Sync
+async function ghSave(token,owner,repo){
+  var data={};
+  SYNC_KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v)data[k]=v;});
+  var content=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))));
+  var hdrs={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'};
+  var url='https://api.github.com/repos/'+owner+'/'+repo+'/contents/data.json';
+  var sha=null;
+  try{var r=await fetch(url,{headers:hdrs});if(r.ok){var j=await r.json();sha=j.sha;}else if(r.status!==404){var ej=await r.json().catch(function(){return{};});return{ok:false,msg:'GET помилка '+r.status+': '+(ej.message||'')};}}catch(e){}
+  var body={message:'sync workout data',content:content};
+  if(sha)body.sha=sha;
+  var res=await fetch(url,{method:'PUT',headers:hdrs,body:JSON.stringify(body)});
+  if(!res.ok){var eb=await res.json().catch(function(){return{};});return{ok:false,msg:'Помилка '+res.status+': '+(eb.message||'невідома')};}
+  return{ok:true,msg:'✓ Збережено в GitHub!'};
+}
+async function ghLoad(token,owner,repo){
+  var url='https://api.github.com/repos/'+owner+'/'+repo+'/contents/data.json';
+  var r=await fetch(url,{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
+  if(!r.ok){if(r.status===404)return{ok:false,msg:'Файл не знайдено. Спочатку збережи дані.'};var e=await r.json().catch(function(){return{};});return{ok:false,msg:'Помилка '+r.status+': '+(e.message||'')};}
+  var j=await r.json();
+  var data=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+  SYNC_KEYS.forEach(function(k){if(data[k])localStorage.setItem(k,data[k]);});
+  return{ok:true,msg:'✓ Завантажено! Перезавантаж сторінку.'};
 }
 
-// ─── COLORS ───────────────────────────────────────────────────────────────────
-const C = {
-  bg: '#0a0a0f', card: '#1a1a2e', inner: '#0d0d1a', border: '#2a2a3e',
-  text: '#e8e6e0', muted: '#5a5a7a', dim: '#3a3a5a',
-  orange: '#ff6b35', orangeL: '#ff9f1c',
-  green: '#4aff7a', greenBg: '#1a3a1a', greenBorder: '#2a5a2a',
-  red: '#ff6b6b', redBg: '#3a1a1a', redBorder: '#5a2a2a',
-};
+// WeightChart
+function WeightChart(p){
+  var entries=Object.entries(p.weightLog).sort(function(a,b){return a[0].localeCompare(b[0]);});
+  var shown=p.days?entries.slice(-p.days):entries;
+  if(shown.length<2)return h('div',{style:{textAlign:'center',color:C.muted,padding:'20px 0',fontSize:12}},'Потрібно мінімум 2 записи');
+  var vals=shown.map(function(e){return parseFloat(e[1]);});
+  var mn=Math.min.apply(null,vals)-0.5,mx=Math.max.apply(null,vals)+0.5;
+  var cx=function(i){return 8+i/(shown.length-1)*284;};
+  var cy=function(v){return 102-(v-mn)/(mx-mn)*94;};
+  var pts=shown.map(function(e,i){return cx(i)+','+cy(parseFloat(e[1]));}).join(' ');
+  var area='M'+cx(0)+',110 '+shown.map(function(e,i){return'L'+cx(i)+','+cy(parseFloat(e[1]));}).join(' ')+' L'+cx(shown.length-1)+',110 Z';
+  return h('div',{style:{overflowX:'auto'}},
+    h('svg',{width:300,height:110,style:{display:'block',margin:'0 auto'}},
+      h('defs',null,h('linearGradient',{id:'wg',x1:'0',y1:'0',x2:'0',y2:'1'},h('stop',{offset:'0%',stopColor:C.orange,stopOpacity:'0.3'}),h('stop',{offset:'100%',stopColor:C.orange,stopOpacity:'0'}))),
+      [0,0.25,0.5,0.75,1].map(function(t){return h('line',{key:t,x1:8,y1:8+94*(1-t),x2:292,y2:8+94*(1-t),stroke:C.border,strokeWidth:'1',strokeDasharray:'3,3'});}),
+      h('path',{d:area,fill:'url(#wg)'}),
+      h('polyline',{points:pts,fill:'none',stroke:C.orange,strokeWidth:'2',strokeLinejoin:'round',strokeLinecap:'round'}),
+      shown.map(function(e,i){return h('circle',{key:i,cx:cx(i),cy:cy(parseFloat(e[1])),r:'3',fill:C.orange,stroke:C.bg,strokeWidth:'1.5'});}),
+      h('text',{x:cx(0),y:cy(vals[0])-7,textAnchor:'middle',fontSize:'9',fill:C.orangeL},vals[0]),
+      h('text',{x:cx(shown.length-1),y:cy(vals[vals.length-1])-7,textAnchor:'middle',fontSize:'9',fill:C.orangeL},vals[vals.length-1])),
+    h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:9,color:C.muted,padding:'4px 8px 0'}},h('span',null,shown[0][0]),h('span',null,shown[shown.length-1][0])));
+}
 
-// ─── DEFAULT PLAN ─────────────────────────────────────────────────────────────
-const DEFAULT_PLAN = {
-  A: {
-    name: 'Понеділок — 💪 Груди + Трицепс', emoji: '💪',
-    exercises: [
-      { id: 'A0', name: 'Жим штанги лежачи', sets: 4, reps: '8-10', rest: '90 сек' },
-      { id: 'A1', name: 'Жим гантелей під кутом 30°', sets: 3, reps: '10-12', rest: '75 сек' },
-      { id: 'A2', name: 'Зведення в кросовері', sets: 3, reps: '12-15', rest: '60 сек' },
-      { id: 'A3', name: 'Французький жим зі штангою', sets: 3, reps: '10-12', rest: '75 сек' },
-      { id: 'A4', name: 'Жим вниз на блоці', sets: 3, reps: '12-15', rest: '60 сек' },
-      { id: 'A5', name: 'Скручування (верхній прес)', sets: 3, reps: '20', rest: '45 сек' },
-      { id: 'A6', name: 'Велосипед (косі)', sets: 3, reps: '20', rest: '45 сек' },
-      { id: 'A7', name: 'Планка', sets: 3, reps: '45 сек', rest: '45 сек' },
-    ]
-  },
-  B: {
-    name: 'Середа — 🏋️ Спина + Біцепс', emoji: '🏋️',
-    exercises: [
-      { id: 'B0', name: 'Підтягування / тяга верхнього блоку', sets: 4, reps: '8-10', rest: '90 сек' },
-      { id: 'B1', name: 'Тяга штанги в нахилі', sets: 4, reps: '8-10', rest: '90 сек' },
-      { id: 'B2', name: 'Горизонтальна тяга блоку', sets: 3, reps: '12', rest: '75 сек' },
-      { id: 'B3', name: 'Підйом штанги на біцепс', sets: 3, reps: '10-12', rest: '60 сек' },
-      { id: 'B4', name: 'Молоткові згинання з гантелями', sets: 3, reps: '12', rest: '60 сек' },
-      { id: 'B5', name: 'Підйом ніг лежачи (нижній прес)', sets: 3, reps: '15', rest: '45 сек' },
-      { id: 'B6', name: 'Зворотні скручування', sets: 3, reps: '15', rest: '45 сек' },
-      { id: 'B7', name: 'Планка з чергуванням ніг', sets: 3, reps: '12 на ногу', rest: '45 сек' },
-    ]
-  },
-  C: {
-    name: "П'ятниця — 🦵 Ноги + Плечі", emoji: '🦵',
-    exercises: [
-      { id: 'C0', name: 'Присідання зі штангою', sets: 4, reps: '8-10', rest: '2 хв' },
-      { id: 'C1', name: 'Румунська тяга', sets: 3, reps: '10-12', rest: '90 сек' },
-      { id: 'C2', name: 'Жим ногами в тренажері', sets: 3, reps: '12-15', rest: '75 сек' },
-      { id: 'C3', name: 'Жим гантелей над головою (сидячи)', sets: 4, reps: '10-12', rest: '75 сек' },
-      { id: 'C4', name: 'Розведення гантелей в сторони', sets: 3, reps: '15', rest: '60 сек' },
-      { id: 'C5', name: 'Тяга до підборіддя', sets: 3, reps: '12', rest: '60 сек' },
-      { id: 'C6', name: 'Скручування на римській лавці', sets: 3, reps: '15-20', rest: '45 сек' },
-      { id: 'C7', name: 'Mountain climbers', sets: 3, reps: '30 сек', rest: '30 сек' },
-      { id: 'C8', name: 'Бічна планка', sets: 3, reps: '35 сек/сторону', rest: '30 сек' },
-    ]
-  },
-};
+// Confirm
+function Confirm(p){
+  return h('div',{style:{position:'fixed',inset:0,zIndex:200,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',padding:24},onClick:p.onNo},
+    h('div',{onClick:function(e){e.stopPropagation();},style:{background:'#13131f',border:'1px solid '+C.border,borderRadius:16,padding:24,maxWidth:320,width:'100%'}},
+      h('div',{style:{fontSize:14,marginBottom:20,lineHeight:1.6,color:C.text}},p.msg),
+      h('div',{style:{display:'flex',gap:8}},
+        h('button',{onClick:p.onNo,style:{flex:1,padding:'11px 0',background:C.card,border:'1px solid '+C.border,borderRadius:10,color:'#a0a0b0',cursor:'pointer',fontSize:13}},'Скасувати'),
+        h('button',{onClick:p.onYes,style:{flex:1,padding:'11px 0',background:'#3a1a1a',border:'1px solid #7a2a2a',borderRadius:10,color:C.red,fontWeight:700,cursor:'pointer',fontSize:13}},'Видалити'))));
+}
 
-const WEEK_SCHEDULE = ['A', 'rest', 'B', 'rest', 'C', 'rest', 'rest'];
-const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-const EMOJIS = ['💪', '🏋️', '🦵', '🔥', '🏃', '🤸', '⚡', '🎯', '🧘', '🥊'];
+// VideoModal
+function VideoModal(p){
+  var _u=useState(p.videos[p.exId]||''),url=_u[0],setUrl=_u[1];
+  var _e=useState(''),err=_e[0],setErr=_e[1];
+  return h('div',{style:{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'flex-end',justifyContent:'center'},onClick:p.onClose},
+    h('div',{onClick:function(e){e.stopPropagation();},style:{background:'#13131f',border:'1px solid '+C.border,borderRadius:'20px 20px 0 0',padding:24,width:'100%',maxWidth:480}},
+      h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
+        h('div',null,h('div',{style:{fontSize:11,color:C.muted,letterSpacing:2,textTransform:'uppercase'}},'Відео-інструкція'),h('div',{style:{fontSize:15,fontWeight:700,marginTop:2,color:C.text}},p.exName)),
+        h('button',{onClick:p.onClose,style:{background:'none',border:'none',color:C.muted,fontSize:22,cursor:'pointer'}},'✕')),
+      h('input',{autoFocus:true,value:url,onChange:function(e){setUrl(e.target.value);setErr('');},placeholder:'https://youtube.com/watch?v=...',style:{width:'100%',background:C.card,border:'1px solid '+(err?'#ff4a4a':C.border),borderRadius:10,color:C.text,padding:'12px 14px',fontSize:13,boxSizing:'border-box'}}),
+      err&&h('div',{style:{color:'#ff4a4a',fontSize:11,marginTop:6}},err),
+      h('div',{style:{display:'flex',gap:8,marginTop:16}},
+        p.videos[p.exId]&&h('button',{onClick:function(){p.onSave(p.exId,'');p.onClose();},style:{flex:1,padding:'12px 0',background:'#2a1a1a',border:'1px solid #5a2a2a',borderRadius:10,color:C.red,cursor:'pointer',fontSize:13}},'🗑 Видалити'),
+        h('button',{onClick:function(){if(!url||isUrl(url)){p.onSave(p.exId,url);p.onClose();}else setErr('Невірний URL');},style:{flex:2,padding:'12px 0',background:'linear-gradient(135deg,'+C.orange+','+C.orangeL+')',border:'none',borderRadius:10,color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer'}},'💾 Зберегти'))));
+}
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-const todayKey = () => new Date().toISOString().split('T')[0];
-const uid = () => Math.random().toString(36).slice(2, 8);
-const isValidUrl = (s) => { try { new URL(s); return true; } catch { return false; } };
-const parseRestSec = (s) => {
-  if (!s) return 60;
-  if (s.includes('2 хв')) return 120;
-  if (s.includes('90')) return 90;
-  if (s.includes('75')) return 75;
-  if (s.includes('60')) return 60;
-  if (s.includes('45')) return 45;
-  return 60;
-};
+// WeightLogModal
+function WeightLogModal(p){
+  var _t=useState('log'),tab=_t[0],setTab=_t[1];
+  var _cd=useState(30),chartDays=_cd[0],setChartDays=_cd[1];
+  var _d=useState(p.todayK),date=_d[0],setDate=_d[1];
+  var _v=useState(p.weightLog[p.todayK]||''),val=_v[0],setVal=_v[1];
+  var _sv=useState(false),saved=_sv[0],setSaved=_sv[1];
+  var last30=Array.from({length:30},function(_,i){var d=new Date();d.setDate(d.getDate()-i);return d.toISOString().split('T')[0];});
+  return h('div',{style:{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'flex-end',justifyContent:'center'},onClick:p.onClose},
+    h('div',{onClick:function(e){e.stopPropagation();},style:{background:C.card,border:'1px solid '+C.border,borderRadius:'20px 20px 0 0',width:'100%',maxWidth:480,maxHeight:'90vh',display:'flex',flexDirection:'column'}},
+      h('div',{style:{padding:'20px 20px 0',flexShrink:0}},
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
+          h('div',null,h('div',{style:{fontSize:11,color:C.muted,letterSpacing:2,textTransform:'uppercase'}},'Щоденник ваги'),h('div',{style:{fontSize:15,fontWeight:700,marginTop:2,color:C.text}},'⚖️ Записати вагу')),
+          h('button',{onClick:p.onClose,style:{background:'none',border:'none',color:C.muted,fontSize:22,cursor:'pointer'}},'✕')),
+        h('div',{style:{display:'flex',borderBottom:'1px solid '+C.border,marginBottom:16}},
+          [['log','📝 Запис'],['chart','📈 Графік']].map(function(item){return h('button',{key:item[0],onClick:function(){setTab(item[0]);},style:{flex:1,padding:'8px 0',background:'none',border:'none',borderBottom:tab===item[0]?'2px solid '+C.orange:'2px solid transparent',color:tab===item[0]?C.orange:C.muted,fontSize:12,cursor:'pointer'}},item[1]);}))),
+      h('div',{style:{overflowY:'auto',padding:'0 20px 28px',flex:1}},
+        tab==='log'&&h('div',null,
+          h('div',{style:{background:C.inner,borderRadius:12,padding:14,border:'1px solid '+C.border,marginBottom:14}},
+            h('div',{style:{fontSize:11,color:C.muted,marginBottom:8}},'ДАТА: '+date+(date===p.todayK?' · сьогодні':'')),
+            h('div',{style:{display:'flex',gap:10,alignItems:'center'}},
+              h('input',{autoFocus:true,type:'number',step:'0.1',placeholder:'95.0',value:val,onChange:function(e){setVal(e.target.value);setSaved(false);},onClick:function(e){e.target.select();},style:{flex:1,background:C.card,border:'1px solid '+C.orange,borderRadius:10,color:C.orange,fontSize:32,fontWeight:700,padding:'10px 14px',outline:'none',textAlign:'center'}}),
+              h('span',{style:{fontSize:18,color:C.muted,fontWeight:700}},'кг')),
+            h('button',{onClick:function(){if(val){p.onSave(date,val);setSaved(true);}},disabled:!val,style:{width:'100%',marginTop:12,padding:'12px 0',background:saved?C.greenBg:val?'linear-gradient(135deg,'+C.orange+','+C.orangeL+')':'#1a1a2e',border:saved?'1px solid '+C.greenBorder:'none',borderRadius:10,color:saved?C.green:val?'#fff':C.dim,fontSize:14,fontWeight:700,cursor:val?'pointer':'default'}},saved?'✓ Збережено · '+date:'💾 Зберегти')),
+          h('div',{style:{fontSize:11,color:C.muted,letterSpacing:1,marginBottom:8}},'ВИБРАТИ ІНШИЙ ДЕНЬ'),
+          last30.map(function(d){return h('button',{key:d,onClick:function(){setDate(d);setVal(p.weightLog[d]||'');setSaved(false);},style:{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',padding:'9px 12px',marginBottom:4,background:d===date?'#1e1e3e':C.inner,border:'1px solid '+(d===date?C.orange:p.weightLog[d]?'#1a3020':C.border),borderRadius:8,cursor:'pointer',boxSizing:'border-box'}},h('span',{style:{fontSize:12,color:d===date?C.orangeL:d===p.todayK?C.text:C.muted}},(d===p.todayK?'Сьогодні  ':'')+d),h('span',{style:{fontSize:13,fontWeight:700,color:p.weightLog[d]?C.orangeL:C.dim}},p.weightLog[d]?p.weightLog[d]+' кг':'—'));})),
+        tab==='chart'&&(Object.keys(p.weightLog).length>=2?h('div',null,
+          h('div',{style:{display:'flex',gap:6,marginBottom:12}},[[7,'7 днів'],[30,'30 днів'],[null,'Весь час']].map(function(item){return h('button',{key:item[1],onClick:function(){setChartDays(item[0]);},style:{flex:1,padding:'7px 4px',background:chartDays===item[0]?C.card:C.inner,border:'1px solid '+(chartDays===item[0]?C.orange:C.border),borderRadius:8,color:chartDays===item[0]?C.orange:C.muted,fontSize:11,cursor:'pointer',fontWeight:chartDays===item[0]?700:400}},item[1]);})),
+          h('div',{style:{background:C.inner,borderRadius:12,padding:'14px 4px 10px',border:'1px solid '+C.border,marginBottom:16}},h(WeightChart,{weightLog:p.weightLog,days:chartDays})),
+          h('div',{style:{fontSize:11,color:C.muted,letterSpacing:1,marginBottom:8}},'ВСІ ЗАПИСИ'),
+          Object.entries(p.weightLog).sort(function(a,b){return b[0].localeCompare(a[0]);}).map(function(item){return h('div',{key:item[0],style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',background:C.inner,border:'1px solid '+C.border,borderRadius:8,marginBottom:4}},h('span',{style:{fontSize:12,color:item[0]===p.todayK?C.text:C.muted}},(item[0]===p.todayK?'Сьогодні · ':'')+item[0]),h('div',{style:{display:'flex',alignItems:'center',gap:10}},h('span',{style:{fontSize:14,fontWeight:700,color:C.orangeL}},item[1]+' кг'),h('button',{onClick:function(){setTab('log');setDate(item[0]);setVal(item[1]);setSaved(false);},style:{background:'none',border:'1px solid '+C.dim,borderRadius:6,color:C.muted,padding:'3px 8px',cursor:'pointer',fontSize:11}},'✎')));})):
+          h('div',{style:{textAlign:'center',color:C.muted,padding:'40px 0',fontSize:13}},'Додай мінімум 2 записи для графіку')))));
+}
 
-const ls = {
-  get: (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-  del: (k) => { try { localStorage.removeItem(k); } catch {} },
-};
+// EditPlanModal
+function EditPlanModal(p){
+  var _n=useState(p.plan.name),name=_n[0],setName=_n[1];
+  var _em=useState(p.plan.emoji),emoji=_em[0],setEmoji=_em[1];
+  var _ex=useState(p.plan.exercises.map(function(e){return Object.assign({},e);})),exs=_ex[0],setExs=_ex[1];
+  function updEx(i,field,val){setExs(function(prev){return prev.map(function(e,j){return j===i?Object.assign({},e,{[field]:val}):e;});});}
+  function moveEx(i,dir){var arr=exs.slice(),j=i+dir;if(j<0||j>=arr.length)return;var tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;setExs(arr);}
+  return h('div',{style:{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.95)',overflowY:'auto'}},
+    h('div',{style:{background:C.bg,minHeight:'100%',padding:16,paddingBottom:40}},
+      h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},
+        h('div',{style:{fontSize:16,fontWeight:700,color:C.text}},'✏️ Редагувати день '+p.planKey),
+        h('button',{onClick:p.onClose,style:{background:'none',border:'none',color:C.muted,fontSize:22,cursor:'pointer'}},'✕')),
+      h('div',{style:{background:C.card,borderRadius:12,padding:14,marginBottom:16,border:'1px solid '+C.border}},
+        h('div',{style:{fontSize:11,color:C.muted,marginBottom:6,letterSpacing:1}},'НАЗВА ДНЯ'),
+        h('input',{value:name,onChange:function(e){setName(e.target.value);},style:{width:'100%',background:C.inner,border:'1px solid '+C.border,borderRadius:8,color:C.text,padding:'10px 12px',fontSize:13,boxSizing:'border-box',marginBottom:12}}),
+        h('div',{style:{fontSize:11,color:C.muted,marginBottom:8,letterSpacing:1}},'ЕМОДЗІ'),
+        h('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},EMOJIS.map(function(e){return h('button',{key:e,onClick:function(){setEmoji(e);},style:{fontSize:22,background:emoji===e?'#2a2a4e':'none',border:'1px solid '+(emoji===e?C.orange:C.border),borderRadius:8,padding:'4px 8px',cursor:'pointer'}},e);}))),
+      h('div',{style:{fontSize:11,color:C.muted,marginBottom:10,letterSpacing:1}},'ВПРАВИ ('+exs.length+')'),
+      exs.map(function(ex,i){return h('div',{key:ex.id,style:{background:C.card,borderRadius:12,padding:12,marginBottom:10,border:'1px solid '+C.border}},
+        h('div',{style:{display:'flex',gap:6,marginBottom:8,alignItems:'center'}},
+          h('input',{value:ex.name,onChange:function(e){updEx(i,'name',e.target.value);},style:{flex:1,background:C.inner,border:'1px solid '+C.border,borderRadius:8,color:C.text,padding:'8px 10px',fontSize:13}}),
+          h('button',{onClick:function(){moveEx(i,-1);},style:{background:'none',border:'1px solid '+C.border,borderRadius:6,color:C.muted,padding:'6px 9px',cursor:'pointer',fontSize:14}},'↑'),
+          h('button',{onClick:function(){moveEx(i,1);},style:{background:'none',border:'1px solid '+C.border,borderRadius:6,color:C.muted,padding:'6px 9px',cursor:'pointer',fontSize:14}},'↓'),
+          h('button',{onClick:function(){setExs(function(prev){return prev.filter(function(_,j){return j!==i;});});},style:{background:'#2a1a1a',border:'1px solid #5a2a2a',borderRadius:6,color:C.red,padding:'6px 9px',cursor:'pointer',fontSize:14}},'✕')),
+        h('div',{style:{display:'flex',gap:6}},
+          [['sets','Підходи','number'],['reps','Повторення','text'],['rest','Відпочинок','text']].map(function(f){return h('div',{key:f[0],style:{flex:1}},
+            h('div',{style:{fontSize:9,color:C.muted,marginBottom:4}},f[1]),
+            h('input',{value:ex[f[0]],type:f[2],inputMode:f[2]==='number'?'numeric':'text',onChange:function(e){updEx(i,f[0],f[2]==='number'?Number(e.target.value):e.target.value);},style:{width:'100%',background:C.inner,border:'1px solid '+C.border,borderRadius:6,color:C.text,padding:'6px 8px',fontSize:16,boxSizing:'border-box'}}));}))
+      );}),
+      h('button',{onClick:function(){setExs(function(prev){return prev.concat([{id:uid(),name:'Нова вправа',sets:3,reps:'10-12',rest:'60 сек'}]);});},style:{width:'100%',padding:12,background:C.card,border:'1px dashed #3a3a5a',borderRadius:12,color:'#7a7a9a',fontSize:13,cursor:'pointer',marginBottom:16}},'＋ Додати вправу'),
+      h('button',{onClick:function(){p.onSave(p.planKey,Object.assign({},p.plan,{name:name,emoji:emoji,exercises:exs}));p.onClose();},style:{width:'100%',padding:14,background:'linear-gradient(135deg,'+C.orange+','+C.orangeL+')',border:'none',borderRadius:12,color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer'}},'💾 Зберегти зміни')));
+}
 
-// ─── GITHUB SYNC ──────────────────────────────────────────────────────────────
-const SYNC_KEYS = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log'];
+// GitHubSyncModal
+function GitHubSyncModal(p){
+  var _t=useState(localStorage.getItem('gh_token')||''),token=_t[0],setToken=_t[1];
+  var _o=useState(localStorage.getItem('gh_owner')||''),owner=_o[0],setOwner=_o[1];
+  var _r=useState(localStorage.getItem('gh_repo')||''),repo=_r[0],setRepo=_r[1];
+  var _s=useState(null),status=_s[0],setStatus=_s[1];
+  var _l=useState(false),loading=_l[0],setLoading=_l[1];
+  function saveCredentials(){localStorage.setItem('gh_token',token);localStorage.setItem('gh_owner',owner);localStorage.setItem('gh_repo',repo);}
+  async function handleSave(){if(!token||!owner||!repo){setStatus({ok:false,msg:'Заповни всі поля'});return;}saveCredentials();setLoading(true);setStatus(null);var res=await ghSave(token,owner,repo);setLoading(false);setStatus(res);}
+  async function handleLoad(){if(!token||!owner||!repo){setStatus({ok:false,msg:'Заповни всі поля'});return;}saveCredentials();setLoading(true);setStatus(null);var res=await ghLoad(token,owner,repo);setLoading(false);setStatus(res);}
+  var iStyle={width:'100%',background:'#0d0d1a',border:'1px solid '+C.border,borderRadius:8,color:C.text,padding:'10px 12px',fontSize:14,boxSizing:'border-box',marginBottom:10};
+  return h('div',{style:{position:'fixed',inset:0,zIndex:300,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'flex-end',justifyContent:'center'},onClick:p.onClose},
+    h('div',{onClick:function(e){e.stopPropagation();},style:{background:'#13131f',border:'1px solid '+C.border,borderRadius:'20px 20px 0 0',width:'100%',maxWidth:480,padding:24}},
+      h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},
+        h('div',null,h('div',{style:{fontSize:11,color:C.muted,letterSpacing:2}},'СИНХРОНІЗАЦІЯ'),h('div',{style:{fontSize:15,fontWeight:700,color:C.text,marginTop:2}},'☁️ GitHub Sync')),
+        h('button',{onClick:p.onClose,style:{background:'none',border:'none',color:C.muted,fontSize:22,cursor:'pointer'}},'✕')),
+      h('div',{style:{fontSize:12,color:C.muted,marginBottom:16,lineHeight:1.6,background:'#0d0d1a',padding:12,borderRadius:8}},
+        'Дані зберігаються як файл ',h('b',{style:{color:C.orangeL}},'data.json'),' у репо. Токен потрібен з правом ',h('b',{style:{color:C.orangeL}},'Contents: Read and write'),'.'),
+      h('div',{style:{fontSize:11,color:C.muted,marginBottom:4}},'GITHUB TOKEN'),
+      h('input',{value:token,type:'password',onChange:function(e){setToken(e.target.value);},placeholder:'github_pat_...',style:iStyle}),
+      h('div',{style:{fontSize:11,color:C.muted,marginBottom:4}},'ВЛАСНИК РЕПО (логін)'),
+      h('input',{value:owner,onChange:function(e){setOwner(e.target.value);},placeholder:'vaadim123',style:iStyle}),
+      h('div',{style:{fontSize:11,color:C.muted,marginBottom:4}},'НАЗВА РЕПО'),
+      h('input',{value:repo,onChange:function(e){setRepo(e.target.value);},placeholder:'gym_app',style:Object.assign({},iStyle,{marginBottom:16})}),
+      status&&h('div',{style:{padding:'10px 12px',borderRadius:8,marginBottom:12,background:status.ok?C.greenBg:C.redBg,border:'1px solid '+(status.ok?C.greenBorder:C.redBorder),fontSize:13,color:status.ok?C.green:C.red}},status.msg),
+      h('div',{style:{display:'flex',gap:10}},
+        h('button',{onClick:handleLoad,disabled:loading,style:{flex:1,padding:14,background:'#1a1a2e',border:'1px solid '+C.border,borderRadius:10,color:C.text,fontSize:14,fontWeight:700,cursor:'pointer'}},loading?'...':'⬇️ Завантажити'),
+        h('button',{onClick:handleSave,disabled:loading,style:{flex:1,padding:14,background:'linear-gradient(135deg,'+C.orange+','+C.orangeL+')',border:'none',borderRadius:10,color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer'}},loading?'...':'⬆️ Зберегти'))));
+}
 
-async function githubSave(token, owner, repo) {
-  const data = {};
-  SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-  
-  // Get current file SHA (needed for update)
-  let sha = null;
-  try {
-    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
-    });
-    if (r.ok) { const j = await r.json(); sha = j.sha; }
-  } catch {}
-  
-  const body = { message: 'sync workout data', content };
-  if (sha) body.sha = sha;
-  
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
-    method: 'PUT',
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    console.error('GitHub save error:', res.status, err.message);
+// DataTransferModal
+function DataTransferModal(p){
+  var _t=useState('export'),tab=_t[0],setTab=_t[1];
+  var _i=useState(''),importText=_i[0],setImportText=_i[1];
+  var _s=useState(null),status=_s[0],setStatus=_s[1];
+  var KEYS=['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_current'];
+  function getExport(){var data={};KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v)data[k]=v;});return JSON.stringify(data);}
+  function copyExport(){var ta=document.getElementById('wt-export-ta');if(!ta)return;ta.select();ta.setSelectionRange(0,99999);try{var ok=document.execCommand('copy');setStatus(ok?'copied':'manual');}catch(e){setStatus('manual');}setTimeout(function(){setStatus(null);},3000);}
+  function doImport(){try{var data=JSON.parse(importText);KEYS.forEach(function(k){if(data[k])localStorage.setItem(k,data[k]);});setStatus('imported');}catch(e){setStatus('error');}}
+  function doReset(){if(status==='confirm'){KEYS.forEach(function(k){localStorage.removeItem(k);});window.location.reload();}else{setStatus('confirm');}}
+  var TABS=[['export','📤 Експорт'],['import','📥 Імпорт'],['reset','🗑 Скинути']];
+  return h('div',{style:{position:'fixed',inset:0,zIndex:300,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'flex-end',justifyContent:'center'},onClick:p.onClose},
+    h('div',{onClick:function(e){e.stopPropagation();},style:{background:'#13131f',border:'1px solid '+C.border,borderRadius:'20px 20px 0 0',width:'100%',maxWidth:480,maxHeight:'85vh',display:'flex',flexDirection:'column'}},
+      h('div',{style:{padding:'20px 20px 0',flexShrink:0}},
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
+          h('div',null,h('div',{style:{fontSize:11,color:C.muted,letterSpacing:2}},'ДАНІ ДОДАТКУ'),h('div',{style:{fontSize:15,fontWeight:700,color:C.text,marginTop:2}},'⚙️ Управління даними')),
+          h('button',{onClick:p.onClose,style:{background:'none',border:'none',color:C.muted,fontSize:22,cursor:'pointer'}},'✕')),
+        h('div',{style:{display:'flex',borderBottom:'1px solid '+C.border,marginBottom:16}},
+          TABS.map(function(item){var isReset=item[0]==='reset';return h('button',{key:item[0],onClick:function(){setTab(item[0]);setStatus(null);},style:{flex:1,padding:'8px 0',background:'none',border:'none',borderBottom:tab===item[0]?'2px solid '+(isReset?C.red:C.orange):'2px solid transparent',color:tab===item[0]?(isReset?C.red:C.orange):C.muted,fontSize:11,cursor:'pointer'}},item[1]);}))),
+      h('div',{style:{overflowY:'auto',padding:'0 20px 28px',flex:1}},
+        tab==='export'&&h('div',null,
+          h('div',{style:{fontSize:12,color:C.muted,marginBottom:10,lineHeight:1.5}},'Скопіюй текст і встав при імпорті в іншому браузері.'),
+          h('textarea',{id:'wt-export-ta',readOnly:true,value:getExport(),onFocus:function(e){e.target.select();e.target.setSelectionRange(0,99999);},style:{width:'100%',height:120,background:'#0d0d1a',border:'1px solid '+C.border,borderRadius:8,color:C.orangeL,padding:10,fontSize:9,resize:'none',boxSizing:'border-box',WebkitUserSelect:'text',userSelect:'text'}}),
+          h('button',{onClick:copyExport,style:{width:'100%',marginTop:10,padding:12,background:'linear-gradient(135deg,'+C.orange+','+C.orangeL+')',border:'none',borderRadius:10,color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer'}},status==='copied'?'✓ Скопійовано!':status==='manual'?'Виділи і Ctrl+C':'📋 Копіювати все')),
+        tab==='import'&&h('div',null,
+          h('div',{style:{fontSize:12,color:C.muted,marginBottom:10,lineHeight:1.5}},'Встав сюди скопійований текст.'),
+          h('textarea',{value:importText,onChange:function(e){setImportText(e.target.value);setStatus(null);},placeholder:'{"wt_plan":...}',style:{width:'100%',height:120,background:'#0d0d1a',border:'1px solid '+C.border,borderRadius:8,color:C.text,padding:10,fontSize:9,resize:'none',boxSizing:'border-box'}}),
+          status==='imported'&&h('div',{style:{margin:'8px 0',padding:'10px 12px',background:C.greenBg,borderRadius:8,fontSize:12,color:C.green}},'✓ Імпортовано! Перезавантаж сторінку.'),
+          status==='error'&&h('div',{style:{margin:'8px 0',padding:'10px 12px',background:C.redBg,borderRadius:8,fontSize:12,color:C.red}},'✗ Помилка — невірний формат'),
+          h('button',{onClick:doImport,disabled:!importText,style:{width:'100%',marginTop:8,padding:12,background:importText?'linear-gradient(135deg,'+C.orange+','+C.orangeL+')':'#1a1a2e',border:'none',borderRadius:10,color:importText?'#fff':C.dim,fontSize:14,fontWeight:700,cursor:importText?'pointer':'default'}},'💾 Імпортувати')),
+        tab==='reset'&&h('div',null,
+          h('div',{style:{fontSize:13,color:C.muted,marginBottom:16,lineHeight:1.6}},'Видалить всі тренування, вагу, відео та налаштування.'),
+          status==='confirm'&&h('div',{style:{marginBottom:12,padding:'12px 14px',background:C.redBg,border:'1px solid #7a2a2a',borderRadius:8,fontSize:13,color:C.red,textAlign:'center',fontWeight:700}},'⚠️ Це незворотньо! Натисни ще раз.'),
+          h('button',{onClick:doReset,style:{width:'100%',padding:14,background:status==='confirm'?'#5a1a1a':'#2a1a1a',border:'1px solid '+(status==='confirm'?'#cc3333':'#5a2a2a'),borderRadius:10,color:C.red,fontSize:14,fontWeight:700,cursor:'pointer'}},status==='confirm'?'🗑 ТАК, СКИНУТИ ВСЕ':'🗑 Скинути всі дані')))));
+}
+
+// WorkoutSession
+function WorkoutSession(p){
+  var plan=p.plan,dayType=p.dayType,videos=p.videos,onFinish=p.onFinish,startTimer=p.startTimer,onVideoClick=p.onVideoClick,onClearSet=p.onClearSet,getLastSession=p.getLastSession,currentHints=p.currentHints,onToggleHint=p.onToggleHint,DH=p.dayHints||{};
+  var _s=useState(function(){var saved=ls.get('wt_current');if(saved&&saved.date===todayKey()&&saved.sets)return saved.sets;return{};});
+  var sets=_s[0],setSets=_s[1];
+  var setsRef=useRef({});
+  setsRef.current=sets;
+  function getSet(ei,si){return sets[ei+'_'+si]||{weight:'',reps:'',done:false};}
+  function updateSet(ei,si,field,val){
+    var key=ei+'_'+si;
+    var updated=Object.assign({},setsRef.current[key]||{},{[field]:val});
+    var ns=Object.assign({},setsRef.current,{[key]:updated});
+    setSets(ns);
+    ls.set('wt_current',{sets:ns,date:todayKey()});
+    if(field==='done')p.logSet(ei,si,updated);
   }
-  return res.ok;
+  function syncToApp(ei,si){var d=setsRef.current[ei+'_'+si];if(d)p.logSet(ei,si,d);}
+  var totalSets=plan.exercises.reduce(function(s,e){return s+e.sets;},0);
+  var doneSets=Object.values(sets).filter(function(s){return s.done;}).length;
+  var lastSessions={};
+  plan.exercises.forEach(function(ex){lastSessions[ex.id]=getLastSession(ex.id,dayType);});
+  return h('div',null,
+    h('div',{style:{marginBottom:16}},
+      h('div',{style:{fontSize:18,fontWeight:700,color:C.text}},plan.emoji+' '+plan.name),
+      h('div',{style:{marginTop:8,background:C.card,borderRadius:4,height:4,overflow:'hidden'}},
+        h('div',{style:{height:'100%',background:'linear-gradient(90deg,'+C.orange+','+C.orangeL+')',width:(totalSets>0?doneSets/totalSets*100:0)+'%',transition:'width .3s'}})),
+      h('div',{style:{fontSize:11,color:C.muted,marginTop:4}},doneSets+' / '+totalSets+' підходів')),
+    plan.exercises.map(function(ex,ei){
+      var lastSession=lastSessions[ex.id]||null;
+      var vHint=currentHints[ex.id]||DH[ex.id]||null;
+      var hasVideo=!!videos[ex.id];
+      var hintActive=currentHints[ex.id]||null;
+      var firstFilled=Array.from({length:ex.sets},function(_,i){return getSet(ei,i);}).find(function(s){return s.weight||s.reps;});
+      var allDone=Array.from({length:ex.sets},function(_,i){return getSet(ei,i);}).every(function(s){return s.done;});
+      return h('div',{key:ei,style:{background:C.card,borderRadius:12,padding:14,marginBottom:12,border:'1px solid '+C.border}},
+        h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:6}},
+          h('div',{style:{flex:1}},
+            h('div',{style:{fontWeight:700,fontSize:14,color:C.text}},ex.name),
+            h('div',{style:{fontSize:11,color:C.muted,marginTop:1}},ex.reps+' повт · '+ex.rest)),
+          hasVideo?h('div',{style:{display:'flex',alignItems:'center',gap:4}},
+            h('a',{href:videos[ex.id],target:'_blank',rel:'noreferrer',style:{background:C.greenBg,border:'1px solid '+C.greenBorder,borderRadius:8,padding:'5px 11px',color:C.green,fontSize:12,textDecoration:'none'}},'▶ відео'),
+            h('button',{onClick:function(){onVideoClick(ex.id,ex.name);},style:{background:'none',border:'none',color:'#3a3a5a',cursor:'pointer',fontSize:16,padding:4}},'✎')):
+            h('button',{onClick:function(){onVideoClick(ex.id,ex.name);},style:{background:C.card,border:'1px solid #3a3a5a',borderRadius:8,padding:'5px 10px',cursor:'pointer',color:C.muted,fontSize:12}},'＋ відео')),
+        vHint&&!lastSession&&h('div',{style:{marginBottom:8,padding:'5px 10px',background:vHint==='up'?C.greenBg:C.redBg,borderRadius:8,border:'1px solid '+(vHint==='up'?C.greenBorder:C.redBorder)}},
+          h('span',{style:{fontSize:11,fontWeight:700,color:vHint==='up'?C.green:C.red}},vHint==='up'?'↑ більше':'↓ менше')),
+        lastSession&&h('div',{style:{marginBottom:8,padding:'8px 10px',background:C.inner,borderRadius:8,border:'1px solid '+C.border}},
+          h('div',{style:{fontSize:10,color:C.muted,fontWeight:600,marginBottom:4}},'📅 Минулого разу · '+lastSession.date),
+          h('div',{style:{display:'flex',flexWrap:'wrap',gap:5,marginBottom:vHint?4:0}},
+            lastSession.sets.map(function(s,i){return h('span',{key:i,style:{background:C.card,padding:'2px 7px',borderRadius:6,fontSize:12,color:'#c0c0d0',whiteSpace:'nowrap'}},s.weight+'кг×'+s.reps);})),
+          vHint&&h('span',{style:{display:'inline-block',fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:6,color:vHint==='up'?C.green:C.red,background:vHint==='up'?C.greenBg:C.redBg,border:'1px solid '+(vHint==='up'?C.greenBorder:C.redBorder)}},vHint==='up'?'↑ більше':'↓ менше')),
+        Array.from({length:ex.sets},function(_,si){
+          var sd=getSet(ei,si);
+          var hasData=sd.weight||sd.reps||sd.done;
+          return h('div',{key:si,style:{display:'flex',alignItems:'center',gap:6,padding:'6px 0',borderBottom:si<ex.sets-1?'1px solid '+C.border:'none',opacity:sd.done?0.65:1}},
+            h('span',{style:{fontSize:11,color:C.muted,width:18,flexShrink:0}},si+1),
+            h('input',{placeholder:'кг',value:sd.weight,inputMode:'decimal',pattern:'[0-9]*',onChange:function(e){updateSet(ei,si,'weight',e.target.value);},onFocus:function(e){e.target.select();},onBlur:function(){syncToApp(ei,si);},style:{width:52,background:C.inner,border:'1px solid '+C.border,borderRadius:6,color:C.text,padding:'5px 4px',fontSize:16,textAlign:'center'}}),
+            h('input',{placeholder:'повт',value:sd.reps,inputMode:'numeric',pattern:'[0-9]*',onChange:function(e){updateSet(ei,si,'reps',e.target.value);},onFocus:function(e){e.target.select();},onBlur:function(){syncToApp(ei,si);},style:{width:52,background:C.inner,border:'1px solid '+C.border,borderRadius:6,color:C.text,padding:'5px 4px',fontSize:16,textAlign:'center'}}),
+            h('button',{onClick:function(){updateSet(ei,si,'done',!sd.done);if(!sd.done)startTimer(restSec(ex.rest));},style:{flex:1,padding:'6px 0',borderRadius:6,border:'none',cursor:'pointer',background:sd.done?C.greenBg:C.orange,color:sd.done?C.green:'#fff',fontSize:13,fontWeight:700}},sd.done?'✓ Зроблено':'Виконати'),
+            hasData&&h('button',{onClick:function(){var key=ei+'_'+si;setSets(function(prev){var n=Object.assign({},prev);delete n[key];return n;});onClearSet(ei,si);},style:{background:'none',border:'1px solid #3a2a2a',borderRadius:6,color:'#7a4a4a',padding:'5px 7px',cursor:'pointer',fontSize:12,flexShrink:0}},'✕'));
+        }),
+        ex.sets>1&&h('div',{style:{display:'flex',gap:6,marginTop:8}},
+          h('button',{onClick:function(){
+            var w=firstFilled?firstFilled.weight:'',r=firstFilled?firstFilled.reps:'';
+            var ns=Object.assign({},setsRef.current);
+            for(var i=0;i<ex.sets;i++){var k=ei+'_'+i;if(!ns[k]||!ns[k].done){ns[k]=Object.assign({},ns[k]||{},{weight:w,reps:r});p.logSet(ei,i,ns[k]);}}
+            setSets(ns);ls.set('wt_current',{sets:ns,date:todayKey()});
+          },disabled:!firstFilled,style:{flex:1,padding:'7px 4px',background:firstFilled?C.card:'#111118',border:'1px solid '+(firstFilled?C.orangeL:C.border),borderRadius:8,color:firstFilled?C.orangeL:C.dim,fontSize:11,cursor:firstFilled?'pointer':'default',textAlign:'center',lineHeight:1.3}},'⚡\nЗаповнити'),
+          h('button',{onClick:function(){
+            var ns=Object.assign({},setsRef.current);
+            for(var i=0;i<ex.sets;i++){var k=ei+'_'+i;ns[k]=Object.assign({},ns[k]||{},{done:!allDone});p.logSet(ei,i,ns[k]);}
+            setSets(ns);ls.set('wt_current',{sets:ns,date:todayKey()});
+            if(!allDone)startTimer(restSec(ex.rest));
+          },style:{flex:1,padding:'7px 4px',background:allDone?C.greenBg:'#1a2e1a',border:'1px solid '+(allDone?C.greenBorder:'#2a4a2a'),borderRadius:8,color:allDone?C.green:'#7acf7a',fontSize:11,cursor:'pointer',textAlign:'center',lineHeight:1.3}},allDone?'✓✓\nСкасувати':'✓\nВсі готові'),
+          h('button',{onClick:function(){onToggleHint(ex.id,'up');},style:{flex:1,padding:'7px 4px',background:hintActive==='up'?C.greenBg:C.card,border:'1px solid '+(hintActive==='up'?C.greenBorder:C.border),borderRadius:8,color:hintActive==='up'?C.green:C.muted,fontSize:18,fontWeight:700,cursor:'pointer',textAlign:'center',lineHeight:1.3}},hintActive==='up'?'＋\n✓ більше':'＋\nбільше'),
+          h('button',{onClick:function(){onToggleHint(ex.id,'down');},style:{flex:1,padding:'7px 4px',background:hintActive==='down'?C.redBg:C.card,border:'1px solid '+(hintActive==='down'?C.redBorder:C.border),borderRadius:8,color:hintActive==='down'?C.red:C.muted,fontSize:18,fontWeight:700,cursor:'pointer',textAlign:'center',lineHeight:1.3}},hintActive==='down'?'－\n✓ менше':'－\nменше')));
+    }),
+    h('button',{onClick:onFinish,style:{width:'100%',padding:16,background:'linear-gradient(135deg,'+C.orange+','+C.orangeL+')',border:'none',borderRadius:12,color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8}},'🏁 Завершити тренування'));
 }
 
-async function githubLoad(token, owner, repo) {
-  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
-  });
-  if (!r.ok) return false;
-  const j = await r.json();
-  const data = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
-  SYNC_KEYS.forEach(k => { if (data[k]) localStorage.setItem(k, data[k]); });
-  return true;
-}
-
-// ─── WEIGHT CHART ─────────────────────────────────────────────────────────────
-function WeightChart({ weightLog, days }) {
-  const entries = Object.entries(weightLog).sort(([a], [b]) => a.localeCompare(b));
-  const shown = days ? entries.slice(-days) : entries;
-  if (shown.length < 2) return (
-    <div style={{ textAlign: 'center', color: C.muted, padding: '20px 0', fontSize: 12 }}>
-      Потрібно мінімум 2 записи
-    </div>
-  );
-  const vals = shown.map(([, v]) => parseFloat(v));
-  const min = Math.min(...vals) - 0.5;
-  const max = Math.max(...vals) + 0.5;
-  const cx = (i) => 8 + i / (shown.length - 1) * 284;
-  const cy = (v) => 102 - (v - min) / (max - min) * 94;
-  const points = shown.map(([, v], i) => `${cx(i)},${cy(parseFloat(v))}`).join(' ');
-  const area = `M${cx(0)},110 ` + shown.map(([, v], i) => `L${cx(i)},${cy(parseFloat(v))}`).join(' ') + ` L${cx(shown.length - 1)},110 Z`;
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <svg width={300} height={110} style={{ display: 'block', margin: '0 auto' }}>
-        <defs>
-          <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={C.orange} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={C.orange} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {[0, 0.25, 0.5, 0.75, 1].map(t => (
-          <line key={t} x1={8} y1={8 + 94 * (1 - t)} x2={292} y2={8 + 94 * (1 - t)} stroke={C.border} strokeWidth="1" strokeDasharray="3,3" />
-        ))}
-        <path d={area} fill="url(#wg)" />
-        <polyline points={points} fill="none" stroke={C.orange} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        {shown.map(([, v], i) => (
-          <circle key={i} cx={cx(i)} cy={cy(parseFloat(v))} r="3" fill={C.orange} stroke={C.bg} strokeWidth="1.5" />
-        ))}
-        <text x={cx(0)} y={cy(vals[0]) - 7} textAnchor="middle" fontSize="9" fill={C.orangeL}>{vals[0]}</text>
-        <text x={cx(shown.length - 1)} y={cy(vals[vals.length - 1]) - 7} textAnchor="middle" fontSize="9" fill={C.orangeL}>{vals[vals.length - 1]}</text>
-      </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: C.muted, padding: '4px 8px 0' }}>
-        <span>{shown[0][0]}</span>
-        <span>{shown[shown.length - 1][0]}</span>
-      </div>
-    </div>
-  );
-}
-
-// ─── CONFIRM DIALOG ───────────────────────────────────────────────────────────
-function Confirm({ msg, onYes, onNo }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} onClick={onNo}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#13131f', border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, maxWidth: 320, width: '100%' }}>
-        <div style={{ fontSize: 14, marginBottom: 20, lineHeight: 1.6, color: C.text }}>{msg}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={onNo} style={{ flex: 1, padding: '11px 0', background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, color: '#a0a0b0', fontFamily: 'inherit', cursor: 'pointer', fontSize: 13 }}>Скасувати</button>
-          <button onClick={onYes} style={{ flex: 1, padding: '11px 0', background: '#3a1a1a', border: '1px solid #7a2a2a', borderRadius: 10, color: C.red, fontFamily: 'inherit', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Видалити</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── VIDEO MODAL ──────────────────────────────────────────────────────────────
-function VideoModal({ exName, exId, videos, onSave, onClose }) {
-  const [url, setUrl] = useState(videos[exId] || '');
-  const [err, setErr] = useState('');
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#13131f', border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', padding: 24, width: '100%', maxWidth: 480 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Відео-інструкція</div>
-            <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: C.text }}>{exName}</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
-        </div>
-        <input
-          autoFocus value={url}
-          onChange={e => { setUrl(e.target.value); setErr(''); }}
-          placeholder="https://youtube.com/watch?v=..."
-          style={{ width: '100%', background: C.card, border: `1px solid ${err ? '#ff4a4a' : C.border}`, borderRadius: 10, color: C.text, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box', outline: 'none' }}
-        />
-        {err && <div style={{ color: '#ff4a4a', fontSize: 11, marginTop: 6 }}>{err}</div>}
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          {videos[exId] && (
-            <button onClick={() => { onSave(exId, ''); onClose(); }} style={{ flex: 1, padding: '12px 0', background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 10, color: C.red, fontFamily: 'inherit', fontSize: 13, cursor: 'pointer' }}>🗑 Видалити</button>
-          )}
-          <button onClick={() => { if (!url || isValidUrl(url)) { onSave(exId, url); onClose(); } else setErr('Невірний URL'); }} style={{ flex: 2, padding: '12px 0', background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>💾 Зберегти</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── WEIGHT LOG MODAL ─────────────────────────────────────────────────────────
-function WeightLogModal({ weightLog, todayK, onSave, onClose }) {
-  const [tab, setTab] = useState('log');
-  const [chartDays, setChartDays] = useState(30);
-  const [date, setDate] = useState(todayK);
-  const [val, setVal] = useState(weightLog[todayK] || '');
-  const [saved, setSaved] = useState(false);
-  const last30 = Array.from({ length: 30 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return d.toISOString().split('T')[0]; });
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 20px 0', flexShrink: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Щоденник ваги</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: C.text }}>⚖️ Записати вагу</div>
-            </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
-          </div>
-          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 16 }}>
-            {[['log', '📝 Запис'], ['chart', '📈 Графік']].map(([id, label]) => (
-              <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '8px 0', background: 'none', border: 'none', borderBottom: tab === id ? `2px solid ${C.orange}` : '2px solid transparent', color: tab === id ? C.orange : C.muted, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>{label}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ overflowY: 'auto', padding: '0 20px 28px', flex: 1 }}>
-          {tab === 'log' && (
-            <div>
-              <div style={{ background: C.inner, borderRadius: 12, padding: 14, border: `1px solid ${C.border}`, marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>ДАТА: {date}{date === todayK ? ' · сьогодні' : ''}</div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <input autoFocus type="number" step="0.1" placeholder="95.0" value={val}
-                    onChange={e => { setVal(e.target.value); setSaved(false); }}
-                    onClick={e => e.target.select()}
-                    style={{ flex: 1, background: C.card, border: `1px solid ${C.orange}`, borderRadius: 10, color: C.orange, fontSize: 32, fontWeight: 700, padding: '10px 14px', fontFamily: 'inherit', outline: 'none', textAlign: 'center' }}
-                  />
-                  <span style={{ fontSize: 18, color: C.muted, fontWeight: 700 }}>кг</span>
-                </div>
-                <button onClick={() => { if (val) { onSave(date, val); setSaved(true); } }} disabled={!val}
-                  style={{ width: '100%', marginTop: 12, padding: '12px 0', background: saved ? C.greenBg : val ? `linear-gradient(135deg,${C.orange},${C.orangeL})` : '#1a1a2e', border: saved ? `1px solid ${C.greenBorder}` : 'none', borderRadius: 10, color: saved ? C.green : val ? '#fff' : C.dim, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: val ? 'pointer' : 'default' }}>
-                  {saved ? `✓ Збережено · ${date}` : '💾 Зберегти'}
-                </button>
-              </div>
-              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, marginBottom: 8 }}>ВИБРАТИ ІНШИЙ ДЕНЬ</div>
-              {last30.map(d => (
-                <button key={d} onClick={() => { setDate(d); setVal(weightLog[d] || ''); setSaved(false); }}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '9px 12px', marginBottom: 4, background: d === date ? '#1e1e3e' : C.inner, border: `1px solid ${d === date ? C.orange : weightLog[d] ? '#1a3020' : C.border}`, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', boxSizing: 'border-box' }}>
-                  <span style={{ fontSize: 12, color: d === date ? C.orangeL : d === todayK ? C.text : C.muted }}>{d === todayK ? 'Сьогодні  ' : ''}{d}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: weightLog[d] ? C.orangeL : C.dim }}>{weightLog[d] ? `${weightLog[d]} кг` : '—'}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {tab === 'chart' && (
-            Object.keys(weightLog).length >= 2 ? (
-              <div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                  {[[7, '7 днів'], [30, '30 днів'], [null, 'Весь час']].map(([d, label]) => (
-                    <button key={label} onClick={() => setChartDays(d)} style={{ flex: 1, padding: '7px 4px', background: chartDays === d ? C.card : C.inner, border: `1px solid ${chartDays === d ? C.orange : C.border}`, borderRadius: 8, color: chartDays === d ? C.orange : C.muted, fontFamily: 'inherit', fontSize: 11, cursor: 'pointer', fontWeight: chartDays === d ? 700 : 400 }}>{label}</button>
-                  ))}
-                </div>
-                <div style={{ background: C.inner, borderRadius: 12, padding: '14px 4px 10px', border: `1px solid ${C.border}`, marginBottom: 16 }}>
-                  <WeightChart weightLog={weightLog} days={chartDays} />
-                </div>
-                <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, marginBottom: 8 }}>ВСІ ЗАПИСИ</div>
-                {Object.entries(weightLog).sort(([a], [b]) => b.localeCompare(a)).map(([d, v]) => (
-                  <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: C.inner, border: `1px solid ${C.border}`, borderRadius: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: d === todayK ? C.text : C.muted }}>{d === todayK ? 'Сьогодні · ' : ''}{d}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: C.orangeL }}>{v} кг</span>
-                      <button onClick={() => { setTab('log'); setDate(d); setVal(v); setSaved(false); }} style={{ background: 'none', border: `1px solid ${C.dim}`, borderRadius: 6, color: C.muted, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11 }}>✎</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', color: C.muted, padding: '40px 0', fontSize: 13 }}>Додай мінімум 2 записи для графіку</div>
-            )
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── EDIT PLAN MODAL ──────────────────────────────────────────────────────────
-function EditPlanModal({ planKey, plan, onSave, onClose }) {
-  const [name, setName] = useState(plan.name);
-  const [emoji, setEmoji] = useState(plan.emoji);
-  const [exercises, setExercises] = useState(plan.exercises.map(e => ({ ...e })));
-
-  const updateEx = (i, field, val) => setExercises(exs => exs.map((e, j) => j === i ? { ...e, [field]: val } : e));
-  const moveEx = (i, dir) => {
-    const arr = [...exercises];
-    const j = i + dir;
-    if (j < 0 || j >= arr.length) return;
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-    setExercises(arr);
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.95)', overflowY: 'auto' }}>
-      <div style={{ background: C.bg, minHeight: '100%', padding: 16, paddingBottom: 40 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>✏️ Редагувати день {planKey}</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
-        </div>
-        <div style={{ background: C.card, borderRadius: 12, padding: 14, marginBottom: 16, border: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 6, letterSpacing: 1 }}>НАЗВА ДНЯ</div>
-          <input value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', background: C.inner, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: '10px 12px', fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box', marginBottom: 12 }} />
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 8, letterSpacing: 1 }}>ЕМОДЗІ</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {EMOJIS.map(e => (
-              <button key={e} onClick={() => setEmoji(e)} style={{ fontSize: 22, background: emoji === e ? '#2a2a4e' : 'none', border: `1px solid ${emoji === e ? C.orange : C.border}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}>{e}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 10, letterSpacing: 1 }}>ВПРАВИ ({exercises.length})</div>
-        {exercises.map((ex, i) => (
-          <div key={ex.id} style={{ background: C.card, borderRadius: 12, padding: 12, marginBottom: 10, border: `1px solid ${C.border}` }}>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
-              <input value={ex.name} onChange={e => updateEx(i, 'name', e.target.value)} style={{ flex: 1, background: C.inner, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: '8px 10px', fontFamily: 'inherit', fontSize: 13 }} />
-              <button onClick={() => moveEx(i, -1)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, padding: '6px 9px', cursor: 'pointer', fontSize: 14 }}>↑</button>
-              <button onClick={() => moveEx(i, 1)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, padding: '6px 9px', cursor: 'pointer', fontSize: 14 }}>↓</button>
-              <button onClick={() => setExercises(exs => exs.filter((_, j) => j !== i))} style={{ background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 6, color: C.red, padding: '6px 9px', cursor: 'pointer', fontSize: 14 }}>✕</button>
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[['sets', 'Підходи', 'number'], ['reps', 'Повторення', 'text'], ['rest', 'Відпочинок', 'text']].map(([field, label, type]) => (
-                <div key={field} style={{ flex: 1 }}>
-                  <div style={{ fontSize: 9, color: C.muted, marginBottom: 4 }}>{label}</div>
-                  <input value={ex[field]} type={type} inputMode={type === 'number' ? 'numeric' : 'text'}
-                    onChange={e => updateEx(i, field, type === 'number' ? Number(e.target.value) : e.target.value)}
-                    style={{ width: '100%', background: C.inner, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: '6px 8px', fontFamily: 'inherit', fontSize: 16, boxSizing: 'border-box' }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-        <button onClick={() => setExercises(exs => [...exs, { id: uid(), name: 'Нова вправа', sets: 3, reps: '10-12', rest: '60 сек' }])}
-          style={{ width: '100%', padding: 12, background: C.card, border: '1px dashed #3a3a5a', borderRadius: 12, color: '#7a7a9a', fontFamily: 'inherit', fontSize: 13, cursor: 'pointer', marginBottom: 16 }}>
-          ＋ Додати вправу
-        </button>
-        <button onClick={() => { onSave(planKey, { ...plan, name, emoji, exercises }); onClose(); }}
-          style={{ width: '100%', padding: 14, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-          💾 Зберегти зміни
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── GITHUB SYNC MODAL ────────────────────────────────────────────────────────
-function GitHubSyncModal({ onClose }) {
-  const [token, setToken] = useState(() => localStorage.getItem('gh_token') || '');
-  const [owner, setOwner] = useState(() => localStorage.getItem('gh_owner') || '');
-  const [repo, setRepo] = useState(() => localStorage.getItem('gh_repo') || '');
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const save = () => {
-    localStorage.setItem('gh_token', token);
-    localStorage.setItem('gh_owner', owner);
-    localStorage.setItem('gh_repo', repo);
-  };
-
-  const handleSave = async () => {
-    if (!token || !owner || !repo) { setStatus({ ok: false, msg: 'Заповни всі поля' }); return; }
-    save(); setLoading(true); setStatus(null);
-    const ok = await githubSave(token, owner, repo);
-    setLoading(false);
-    setStatus({ ok, msg: ok ? '✓ Збережено в GitHub!' : '✗ Помилка. Перевір: токен має право Contents: Read and Write, репо існує.' });
-  };
-
-  const handleLoad = async () => {
-    if (!token || !owner || !repo) { setStatus({ ok: false, msg: 'Заповни всі поля' }); return; }
-    save(); setLoading(true); setStatus(null);
-    const ok = await githubLoad(token, owner, repo);
-    setLoading(false);
-    if (ok) { setStatus({ ok: true, msg: '✓ Завантажено! Перезавантаж сторінку.' }); }
-    else { setStatus({ ok: false, msg: '✗ Файл не знайдено. Спочатку збережи дані.' }); }
-  };
-
-  const inputStyle = { width: '100%', background: '#0d0d1a', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: '10px 12px', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box', marginBottom: 10 };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#13131f', border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, padding: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2 }}>СИНХРОНІЗАЦІЯ</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 2 }}>☁️ GitHub Sync</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
-        </div>
-
-        <div style={{ fontSize: 12, color: C.muted, marginBottom: 16, lineHeight: 1.6, background: '#0d0d1a', padding: 12, borderRadius: 8 }}>
-          Дані зберігаються як файл <b style={{color: C.orangeL}}>data.json</b> у твоєму репо.<br/>
-          Токен потрібен з правом <b style={{color: C.orangeL}}>repo</b>.
-        </div>
-
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>GITHUB TOKEN</div>
-        <input value={token} onChange={e => setToken(e.target.value)} placeholder="ghp_xxxxxxxxxxxx" type="password" style={inputStyle} />
-
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>ВЛАСНИК РЕПО (логін)</div>
-        <input value={owner} onChange={e => setOwner(e.target.value)} placeholder="vaadim123" style={inputStyle} />
-
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>НАЗВА РЕПО</div>
-        <input value={repo} onChange={e => setRepo(e.target.value)} placeholder="gym_app" style={inputStyle} />
-
-        {status && (
-          <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 12, background: status.ok ? C.greenBg : C.redBg, border: `1px solid ${status.ok ? C.greenBorder : C.redBorder}`, fontSize: 13, color: status.ok ? C.green : C.red }}>
-            {status.msg}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={handleLoad} disabled={loading} style={{ flex: 1, padding: 14, background: '#1a1a2e', border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-            {loading ? '...' : '⬇️ Завантажити'}
-          </button>
-          <button onClick={handleSave} disabled={loading} style={{ flex: 1, padding: 14, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-            {loading ? '...' : '⬆️ Зберегти'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── DATA TRANSFER MODAL ──────────────────────────────────────────────────────
-function DataTransferModal({ onClose }) {
-  const [tab, setTab] = useState('export');
-  const [importText, setImportText] = useState('');
-  const [status, setStatus] = useState(null);
-  const KEYS = ['wt_plan', 'wt_logs', 'wt_videos', 'wt_weightlog', 'wt_goals', 'wt_hints_log', 'wt_current'];
-
-  const getExportData = () => {
-    const data = {};
-    KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
-    return JSON.stringify(data);
-  };
-
-  const copyExport = () => {
-    const ta = document.getElementById('wt-export-ta');
-    if (!ta) return;
-    ta.select();
-    ta.setSelectionRange(0, 99999);
-    try {
-      const ok = document.execCommand('copy');
-      setStatus(ok ? 'copied' : 'manual');
-    } catch { setStatus('manual'); }
-    setTimeout(() => setStatus(null), 3000);
-  };
-
-  const doImport = () => {
-    try {
-      const data = JSON.parse(importText);
-      KEYS.forEach(k => { if (data[k]) localStorage.setItem(k, data[k]); });
-      setStatus('imported');
-    } catch { setStatus('error'); }
-  };
-
-  const doReset = () => {
-    if (status === 'confirm') {
-      KEYS.forEach(k => localStorage.removeItem(k));
-      window.location.reload();
-    } else {
-      setStatus('confirm');
-    }
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#13131f', border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 20px 0', flexShrink: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2 }}>ДАНІ ДОДАТКУ</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginTop: 2 }}>⚙️ Управління даними</div>
-            </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
-          </div>
-          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 16 }}>
-            {[['export', '📤 Експорт'], ['import', '📥 Імпорт'], ['reset', '🗑 Скинути']].map(([id, label]) => (
-              <button key={id} onClick={() => { setTab(id); setStatus(null); }}
-                style={{ flex: 1, padding: '8px 0', background: 'none', border: 'none', borderBottom: tab === id ? `2px solid ${id === 'reset' ? C.red : C.orange}` : '2px solid transparent', color: tab === id ? (id === 'reset' ? C.red : C.orange) : C.muted, fontFamily: 'inherit', fontSize: 11, cursor: 'pointer' }}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{ overflowY: 'auto', padding: '0 20px 28px', flex: 1 }}>
-          {tab === 'export' && (
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 10, lineHeight: 1.5 }}>Скопіюй текст і встав при імпорті в іншому браузері.</div>
-              <textarea id="wt-export-ta" readOnly value={getExportData()}
-                onFocus={e => { e.target.select(); e.target.setSelectionRange(0, 99999); }}
-                style={{ width: '100%', height: 120, background: '#0d0d1a', border: `1px solid ${C.border}`, borderRadius: 8, color: C.orangeL, padding: 10, fontFamily: 'monospace', fontSize: 9, resize: 'none', boxSizing: 'border-box', WebkitUserSelect: 'text', userSelect: 'text' }}
-              />
-              <button onClick={copyExport}
-                style={{ width: '100%', marginTop: 10, padding: 12, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                {status === 'copied' ? '✓ Скопійовано!' : status === 'manual' ? 'Виділи і Ctrl+C / Cmd+C' : '📋 Копіювати все'}
-              </button>
-            </div>
-          )}
-          {tab === 'import' && (
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 10, lineHeight: 1.5 }}>Встав сюди скопійований текст.</div>
-              <textarea value={importText} onChange={e => { setImportText(e.target.value); setStatus(null); }} placeholder='{"wt_plan":...}'
-                style={{ width: '100%', height: 120, background: '#0d0d1a', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: 10, fontFamily: 'monospace', fontSize: 9, resize: 'none', boxSizing: 'border-box' }}
-              />
-              {status === 'imported' && <div style={{ margin: '8px 0', padding: '10px 12px', background: C.greenBg, borderRadius: 8, fontSize: 12, color: C.green }}>✓ Імпортовано! Перезавантаж сторінку.</div>}
-              {status === 'error' && <div style={{ margin: '8px 0', padding: '10px 12px', background: C.redBg, borderRadius: 8, fontSize: 12, color: C.red }}>✗ Помилка — невірний формат</div>}
-              <button onClick={doImport} disabled={!importText}
-                style={{ width: '100%', marginTop: 8, padding: 12, background: importText ? `linear-gradient(135deg,${C.orange},${C.orangeL})` : '#1a1a2e', border: 'none', borderRadius: 10, color: importText ? '#fff' : C.dim, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: importText ? 'pointer' : 'default' }}>
-                💾 Імпортувати
-              </button>
-            </div>
-          )}
-          {tab === 'reset' && (
-            <div>
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>Видалить всі тренування, вагу, відео та налаштування. Скинеться до стандартного плану.</div>
-              {status === 'confirm' && <div style={{ marginBottom: 12, padding: '12px 14px', background: C.redBg, border: `1px solid #7a2a2a`, borderRadius: 8, fontSize: 13, color: C.red, textAlign: 'center', fontWeight: 700 }}>⚠️ Це незворотньо! Натисни ще раз.</div>}
-              <button onClick={doReset}
-                style={{ width: '100%', padding: 14, background: status === 'confirm' ? '#5a1a1a' : '#2a1a1a', border: `1px solid ${status === 'confirm' ? '#cc3333' : '#5a2a2a'}`, borderRadius: 10, color: C.red, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                {status === 'confirm' ? '🗑 ТАК, СКИНУТИ ВСЕ' : '🗑 Скинути всі дані'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── WORKOUT SESSION ──────────────────────────────────────────────────────────
-function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, onVideoClick, onClearSet, getLastSession, currentHints, onToggleHint, dayHints }) {
-  const DH = dayHints || {};
-
-  // Init local sets state from localStorage (crash recovery)
-  const [sets, setSets] = useState(() => {
-    const saved = ls.get('wt_current');
-    if (saved && saved.date === todayKey() && saved.sets) return saved.sets;
-    return {};
-  });
-  const setsRef = useRef({});
-  setsRef.current = sets;
-
-  const getSet = (exIdx, setIdx) => sets[`${exIdx}_${setIdx}`] || { weight: '', reps: '', done: false };
-
-  const updateSet = (exIdx, setIdx, field, val) => {
-    const key = `${exIdx}_${setIdx}`;
-    const updated = { ...setsRef.current[key], [field]: val };
-    const newSets = { ...setsRef.current, [key]: updated };
-    setSets(newSets);
-    // Save to localStorage immediately on every change (crash recovery)
-    ls.set('wt_current', { sets: newSets, date: todayKey() });
-    // Sync to App only on done toggle (for performance)
-    if (field === 'done') logSet(exIdx, setIdx, updated);
-  };
-
-  const syncToApp = (exIdx, setIdx) => {
-    const data = setsRef.current[`${exIdx}_${setIdx}`];
-    if (data) logSet(exIdx, setIdx, data);
-  };
-
-  const totalSets = plan.exercises.reduce((s, e) => s + e.sets, 0);
-  const doneSets = Object.values(sets).filter(s => s.done).length;
-
-  // Build last session cache
-  const lastSessions = {};
-  plan.exercises.forEach(ex => { lastSessions[ex.id] = getLastSession(ex.id, dayType); });
-
-  return (
-    <div>
-      {/* Progress */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{plan.emoji} {plan.name}</div>
-        <div style={{ marginTop: 8, background: C.card, borderRadius: 4, height: 4, overflow: 'hidden' }}>
-          <div style={{ height: '100%', background: `linear-gradient(90deg,${C.orange},${C.orangeL})`, width: `${totalSets > 0 ? doneSets / totalSets * 100 : 0}%`, transition: 'width .3s' }} />
-        </div>
-        <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{doneSets} / {totalSets} підходів</div>
-      </div>
-
-      {/* Exercises */}
-      {plan.exercises.map((ex, exIdx) => {
-        const lastSession = lastSessions[ex.id] || null;
-        const vHint = currentHints[ex.id] || DH[ex.id] || null;
-        const firstFilled = Array.from({ length: ex.sets }, (_, i) => getSet(exIdx, i)).find(s => s.weight || s.reps);
-        const allDone = Array.from({ length: ex.sets }, (_, i) => getSet(exIdx, i)).every(s => s.done);
-        const hasVideo = !!videos[ex.id];
-        const hintActive = currentHints[ex.id] || null;
-
-        return (
-          <div key={exIdx} style={{ background: C.card, borderRadius: 12, padding: 14, marginBottom: 12, border: `1px solid ${C.border}` }}>
-            {/* Exercise header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{ex.name}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{ex.reps} повт · {ex.rest}</div>
-              </div>
-              {hasVideo ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <a href={videos[ex.id]} target="_blank" rel="noreferrer" style={{ background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: 8, padding: '5px 11px', color: C.green, fontSize: 12, textDecoration: 'none' }}>▶ відео</a>
-                  <button onClick={() => onVideoClick(ex.id, ex.name)} style={{ background: 'none', border: 'none', color: '#3a3a5a', cursor: 'pointer', fontSize: 16, padding: 4 }}>✎</button>
-                </div>
-              ) : (
-                <button onClick={() => onVideoClick(ex.id, ex.name)} style={{ background: C.card, border: '1px solid #3a3a5a', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', color: C.muted, fontFamily: 'inherit', fontSize: 12 }}>＋ відео</button>
-              )}
-            </div>
-
-            {/* Hint (standalone - no prev session data) */}
-            {vHint && !lastSession && (
-              <div style={{ marginBottom: 8, padding: '5px 10px', background: vHint === 'up' ? C.greenBg : C.redBg, borderRadius: 8, border: `1px solid ${vHint === 'up' ? C.greenBorder : C.redBorder}` }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: vHint === 'up' ? C.green : C.red }}>{vHint === 'up' ? '↑ більше' : '↓ менше'}</span>
-              </div>
-            )}
-
-            {/* Last session */}
-            {lastSession && (
-              <div style={{ marginBottom: 8, padding: '8px 10px', background: C.inner, borderRadius: 8, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 4 }}>📅 Минулого разу · {lastSession.date}</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: vHint ? 4 : 0 }}>
-                  {lastSession.sets.map((s, i) => (
-                    <span key={i} style={{ background: C.card, padding: '2px 7px', borderRadius: 6, fontSize: 12, color: '#c0c0d0', whiteSpace: 'nowrap' }}>{s.weight}кг×{s.reps}</span>
-                  ))}
-                </div>
-                {vHint && (
-                  <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, color: vHint === 'up' ? C.green : C.red, background: vHint === 'up' ? C.greenBg : C.redBg, border: `1px solid ${vHint === 'up' ? C.greenBorder : C.redBorder}` }}>
-                    {vHint === 'up' ? '↑ більше' : '↓ менше'}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Sets rows */}
-            {Array.from({ length: ex.sets }, (_, setIdx) => {
-              const setData = getSet(exIdx, setIdx);
-              const hasData = setData.weight || setData.reps || setData.done;
-              return (
-                <div key={setIdx} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', borderBottom: setIdx < ex.sets - 1 ? `1px solid ${C.border}` : 'none', opacity: setData.done ? 0.65 : 1 }}>
-                  <span style={{ fontSize: 11, color: C.muted, width: 18, flexShrink: 0 }}>{setIdx + 1}</span>
-                  <input
-                    placeholder="кг" value={setData.weight} inputMode="decimal" pattern="[0-9]*"
-                    onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)}
-                    onFocus={e => e.target.select()}
-                    onBlur={() => syncToApp(exIdx, setIdx)}
-                    style={{ width: 52, background: C.inner, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: '5px 4px', fontFamily: 'inherit', fontSize: 16, textAlign: 'center' }}
-                  />
-                  <input
-                    placeholder="повт" value={setData.reps} inputMode="numeric" pattern="[0-9]*"
-                    onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)}
-                    onFocus={e => e.target.select()}
-                    onBlur={() => syncToApp(exIdx, setIdx)}
-                    style={{ width: 52, background: C.inner, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: '5px 4px', fontFamily: 'inherit', fontSize: 16, textAlign: 'center' }}
-                  />
-                  <button
-                    onClick={() => { updateSet(exIdx, setIdx, 'done', !setData.done); if (!setData.done) startTimer(parseRestSec(ex.rest)); }}
-                    style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', cursor: 'pointer', background: setData.done ? C.greenBg : C.orange, color: setData.done ? C.green : '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700 }}>
-                    {setData.done ? '✓ Зроблено' : 'Виконати'}
-                  </button>
-                  {hasData && (
-                    <button onClick={() => { const key = `${exIdx}_${setIdx}`; setSets(s => { const n = { ...s }; delete n[key]; return n; }); onClearSet(exIdx, setIdx); }}
-                      style={{ background: 'none', border: '1px solid #3a2a2a', borderRadius: 6, color: '#7a4a4a', padding: '5px 7px', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>✕</button>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Quick actions (only for multi-set exercises) */}
-            {ex.sets > 1 && (
-              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                <button
-                  onClick={() => {
-                    const w = firstFilled?.weight || ''; const r = firstFilled?.reps || '';
-                    const newSets = { ...setsRef.current };
-                    for (let i = 0; i < ex.sets; i++) {
-                      const k = `${exIdx}_${i}`;
-                      if (!newSets[k]?.done) { newSets[k] = { ...newSets[k], weight: w, reps: r }; logSet(exIdx, i, newSets[k]); }
-                    }
-                    setSets(newSets); ls.set('wt_current', { sets: newSets, date: todayKey() });
-                  }}
-                  disabled={!firstFilled}
-                  style={{ flex: 1, padding: '7px 4px', background: firstFilled ? C.card : '#111118', border: `1px solid ${firstFilled ? C.orangeL : C.border}`, borderRadius: 8, color: firstFilled ? C.orangeL : C.dim, fontFamily: 'inherit', fontSize: 11, cursor: firstFilled ? 'pointer' : 'default', textAlign: 'center', lineHeight: 1.3 }}>
-                  ⚡{'\n'}Заповнити
-                </button>
-                <button
-                  onClick={() => {
-                    const newSets = { ...setsRef.current };
-                    for (let i = 0; i < ex.sets; i++) {
-                      const k = `${exIdx}_${i}`;
-                      newSets[k] = { ...newSets[k], done: !allDone };
-                      logSet(exIdx, i, newSets[k]);
-                    }
-                    setSets(newSets); ls.set('wt_current', { sets: newSets, date: todayKey() });
-                    if (!allDone) startTimer(parseRestSec(ex.rest));
-                  }}
-                  style={{ flex: 1, padding: '7px 4px', background: allDone ? C.greenBg : '#1a2e1a', border: `1px solid ${allDone ? C.greenBorder : '#2a4a2a'}`, borderRadius: 8, color: allDone ? C.green : '#7acf7a', fontFamily: 'inherit', fontSize: 11, cursor: 'pointer', textAlign: 'center', lineHeight: 1.3 }}>
-                  {allDone ? '✓✓\nСкасувати' : '✓\nВсі готові'}
-                </button>
-                <button onClick={() => onToggleHint(ex.id, 'up')}
-                  style={{ flex: 1, padding: '7px 4px', background: hintActive === 'up' ? C.greenBg : C.card, border: `1px solid ${hintActive === 'up' ? C.greenBorder : C.border}`, borderRadius: 8, color: hintActive === 'up' ? C.green : C.muted, fontFamily: 'inherit', fontSize: 18, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.3 }}>
-                  {hintActive === 'up' ? '＋\n✓ більше' : '＋\nбільше'}
-                </button>
-                <button onClick={() => onToggleHint(ex.id, 'down')}
-                  style={{ flex: 1, padding: '7px 4px', background: hintActive === 'down' ? C.redBg : C.card, border: `1px solid ${hintActive === 'down' ? C.redBorder : C.border}`, borderRadius: 8, color: hintActive === 'down' ? C.red : C.muted, fontFamily: 'inherit', fontSize: 18, fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: 1.3 }}>
-                  {hintActive === 'down' ? '－\n✓ менше' : '－\nменше'}
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      <button onClick={onFinish}
-        style={{ width: '100%', padding: 16, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}>
-        🏁 Завершити тренування
-      </button>
-    </div>
-  );
-}
-
-// ─── APP ──────────────────────────────────────────────────────────────────────
-function App() {
-  const [plan, setPlan] = useState(() => ls.get('wt_plan') || DEFAULT_PLAN);
-  const [logs, setLogs] = useState(() => ls.get('wt_logs') || {});
-  const [videos, setVideos] = useState(() => ls.get('wt_videos') || {});
-  const [weightLog, setWeightLog] = useState(() => ls.get('wt_weightlog') || {});
-  const [currentHints, setCurrentHints] = useState({});
-  const [currentSets, setCurrentSets] = useState({});
-  const [tab, setTab] = useState('today');
-  const [timerSec, setTimerSec] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerEnd, setTimerEnd] = useState(null);
-  const [videoModal, setVideoModal] = useState(null);
-  const [editModal, setEditModal] = useState(null);
-  const [confirmModal, setConfirmModal] = useState(null);
-  const [dateOverride, setDateOverride] = useState(null);
-  const [showWeightModal, setShowWeightModal] = useState(false);
-  const [showTransfer, setShowTransfer] = useState(false);
-  const [showSync, setShowSync] = useState(false);
-  const [goals, setGoals] = useState(() => ls.get('wt_goals') || { start: 99, goal: 85 });
-  const [showGoalEdit, setShowGoalEdit] = useState(false);
-  const [selDay, setSelDay] = useState(() => {
-    const saved = ls.get('wt_current');
-    if (saved && saved.date === todayKey() && saved.day) return saved.day;
-    return null;
-  });
-  const [hintsLog, setHintsLog] = useState(() => {
-    // Load from localStorage, migrate from old logs format
-    const stored = ls.get('wt_hints_log') || {};
-    const oldLogs = ls.get('wt_logs') || {};
-    const merged = { ...stored };
-    Object.values(oldLogs).forEach(l => {
-      if (l.hints && l.dayType && Object.keys(l.hints).length > 0) {
-        merged[l.dayType] = Object.assign({}, l.hints, merged[l.dayType] || {});
-      }
-    });
+// App
+function App(){
+  var _p=useState(function(){return ls.get('wt_plan')||DEFAULT_PLAN;}),plan=_p[0],setPlan=_p[1];
+  var _lg=useState(function(){return ls.get('wt_logs')||{};}),logs=_lg[0],setLogs=_lg[1];
+  var _v=useState(function(){return ls.get('wt_videos')||{};}),videos=_v[0],setVideos=_v[1];
+  var _wl=useState(function(){return ls.get('wt_weightlog')||{};}),weightLog=_wl[0],setWeightLog=_wl[1];
+  var _ch=useState({}),currentHints=_ch[0],setCurrentHints=_ch[1];
+  var _cs=useState({}),currentSets=_cs[0],setCurrentSets=_cs[1];
+  var _tab=useState('today'),tab=_tab[0],setTab=_tab[1];
+  var _ts=useState(0),timerSec=_ts[0],setTimerSec=_ts[1];
+  var _tr=useState(false),timerRunning=_tr[0],setTimerRunning=_tr[1];
+  var _te=useState(null),timerEnd=_te[0],setTimerEnd=_te[1];
+  var _vm=useState(null),videoModal=_vm[0],setVideoModal=_vm[1];
+  var _em=useState(null),editModal=_em[0],setEditModal=_em[1];
+  var _cm=useState(null),confirmModal=_cm[0],setConfirmModal=_cm[1];
+  var _do=useState(null),dateOverride=_do[0];
+  var _wm=useState(false),showWeight=_wm[0],setShowWeight=_wm[1];
+  var _tm=useState(false),showTransfer=_tm[0],setShowTransfer=_tm[1];
+  var _sm=useState(false),showSync=_sm[0],setShowSync=_sm[1];
+  var _g=useState(function(){return ls.get('wt_goals')||{start:99,goal:85};}),goals=_g[0],setGoals=_g[1];
+  var _ge=useState(false),showGoalEdit=_ge[0],setShowGoalEdit=_ge[1];
+  var _sd=useState(function(){var saved=ls.get('wt_current');if(saved&&saved.date===todayKey()&&saved.day)return saved.day;return null;}),selDay=_sd[0],setSelDay=_sd[1];
+  var _hl=useState(function(){
+    var stored=ls.get('wt_hints_log')||{};
+    var oldLogs=ls.get('wt_logs')||{};
+    var merged=Object.assign({},stored);
+    Object.values(oldLogs).forEach(function(l){if(l.hints&&l.dayType&&Object.keys(l.hints).length>0){merged[l.dayType]=Object.assign({},l.hints,merged[l.dayType]||{});}});
     return merged;
-  });
+  }),hintsLog=_hl[0],setHintsLog=_hl[1];
 
-  // Persist to localStorage
-  useEffect(() => { ls.set('wt_plan', plan); }, [plan]);
-  useEffect(() => { ls.set('wt_logs', logs); }, [logs]);
-  useEffect(() => { ls.set('wt_videos', videos); }, [videos]);
-  useEffect(() => { ls.set('wt_weightlog', weightLog); }, [weightLog]);
-  useEffect(() => { ls.set('wt_goals', goals); }, [goals]);
-  useEffect(() => { ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
+  useEffect(function(){ls.set('wt_plan',plan);},[plan]);
+  useEffect(function(){ls.set('wt_logs',logs);},[logs]);
+  useEffect(function(){ls.set('wt_videos',videos);},[videos]);
+  useEffect(function(){ls.set('wt_weightlog',weightLog);},[weightLog]);
+  useEffect(function(){ls.set('wt_goals',goals);},[goals]);
+  useEffect(function(){ls.set('wt_hints_log',hintsLog);},[hintsLog]);
 
-  // Timer - uses absolute end time so backgrounding doesn't break it
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === 'visible' && timerEnd) {
-        const remaining = Math.ceil((timerEnd - Date.now()) / 1000);
-        if (remaining <= 0) { setTimerSec(0); setTimerRunning(false); setTimerEnd(null); }
-        else setTimerSec(remaining);
-      }
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, [timerEnd]);
+  // Timer with absolute end time (works when app backgrounded)
+  useEffect(function(){
+    function onVis(){if(document.visibilityState==='visible'&&timerEnd){var rem=Math.ceil((timerEnd-Date.now())/1000);if(rem<=0){setTimerSec(0);setTimerRunning(false);setTimerEnd(null);}else{setTimerSec(rem);}}}
+    document.addEventListener('visibilitychange',onVis);
+    return function(){document.removeEventListener('visibilitychange',onVis);};
+  },[timerEnd]);
+  useEffect(function(){
+    var interval;
+    if(timerRunning&&timerEnd){interval=setInterval(function(){var rem=Math.ceil((timerEnd-Date.now())/1000);if(rem<=0){setTimerSec(0);setTimerRunning(false);setTimerEnd(null);}else{setTimerSec(rem);}},500);}
+    return function(){clearInterval(interval);};
+  },[timerRunning,timerEnd]);
 
-  useEffect(() => {
-    let interval;
-    if (timerRunning && timerEnd) {
-      interval = setInterval(() => {
-        const remaining = Math.ceil((timerEnd - Date.now()) / 1000);
-        if (remaining <= 0) { setTimerSec(0); setTimerRunning(false); setTimerEnd(null); }
-        else setTimerSec(remaining);
-      }, 500);
-    }
-    return () => clearInterval(interval);
-  }, [timerRunning, timerEnd]);
+  var today=todayKey();
+  var dow=new Date().getDay();
+  var weekIdx=dow===0?6:dow-1;
+  var autoDay=WEEK[weekIdx];
+  var effectiveDay=selDay||autoDay;
+  var sessionDate=dateOverride||today;
+  var todayWeight=weightLog[today];
+  var latestWeight=todayWeight||Object.entries(weightLog).sort(function(a,b){return b[0].localeCompare(a[0]);})[0]?.[1]||'—';
+  var weightRecorded=!!weightLog[today];
+  var todayLog=logs[today];
 
-  const today = todayKey();
-  const dayOfWeek = new Date().getDay();
-  const weekIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const autoDay = WEEK_SCHEDULE[weekIdx];
-  const effectiveDay = selDay || autoDay;
-  const sessionDate = dateOverride || today;
-  const todayWeight = weightLog[today];
-  const latestWeight = todayWeight || Object.entries(weightLog).sort(([a], [b]) => b.localeCompare(a))[0]?.[1] || '—';
-  const weightRecorded = !!weightLog[today];
-  const todayLog = logs[today];
-
-  const getLastSession = (exId, dayType) => {
-    const sortedDates = Object.keys(logs).sort((a, b) => b.localeCompare(a));
-    for (const date of sortedDates) {
-      const log = logs[date];
-      if (log.dayType === dayType) {
-        const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
-        if (exIdx !== -1) {
-          const doneSets = (log.sets?.[exIdx] || []).filter(s => s.weight);
-          if (doneSets.length > 0) {
-            return { date, sets: doneSets, hint: (hintsLog[dayType] || {})[exId] || null };
-          }
+  function getLastSession(exId,dayType){
+    var dates=Object.keys(logs).sort(function(a,b){return b.localeCompare(a);});
+    for(var i=0;i<dates.length;i++){
+      var log=logs[dates[i]];
+      if(log.dayType===dayType){
+        var exIdx=(plan[dayType]&&plan[dayType].exercises||[]).findIndex(function(e){return e.id===exId;});
+        if(exIdx!==-1){
+          var doneSets=(log.sets&&log.sets[exIdx]||[]).filter(function(s){return s.weight;});
+          if(doneSets.length>0)return{date:dates[i],sets:doneSets,hint:(hintsLog[dayType]||{})[exId]||null};
         }
       }
     }
     return null;
-  };
+  }
 
-  const handleFinish = () => {
-    const dayType = effectiveDay;
-    // Read from localStorage (always up to date) OR fall back to App state
-    const savedSession = ls.get('wt_current');
-    const sourceSets = (savedSession && savedSession.date === todayKey() && savedSession.sets)
-      ? savedSession.sets
-      : currentSets;
-    const setsData = {};
-    (plan[dayType]?.exercises || []).forEach((ex, i) => {
-      setsData[i] = Array.from({ length: ex.sets }, (_, j) => sourceSets[`${i}_${j}`] || { weight: '', reps: '', done: false });
+  function handleFinish(){
+    var dayType=effectiveDay;
+    var saved=ls.get('wt_current');
+    var srcSets=(saved&&saved.date===today&&saved.sets)?saved.sets:currentSets;
+    var setsData={};
+    (plan[dayType]&&plan[dayType].exercises||[]).forEach(function(ex,i){
+      setsData[i]=Array.from({length:ex.sets},function(_,j){return srcSets[i+'_'+j]||{weight:'',reps:'',done:false};});
     });
-    const logKey = sessionDate + (logs[sessionDate] && logs[sessionDate].dayType !== dayType ? '_' + dayType : '');
-    setLogs(l => ({ ...l, [logKey]: { dayType, sets: setsData, hints: currentHints, timestamp: Date.now() } }));
-    setCurrentHints({});
-    setCurrentSets({});
-    ls.del('wt_current');
-    setSelDay(null);
-    setTab('history');
-  };
+    var logKey=sessionDate;
+    if(logs[sessionDate]&&logs[sessionDate].dayType!==dayType)logKey=sessionDate+'_'+dayType;
+    setLogs(function(l){return Object.assign({},l,{[logKey]:{dayType:dayType,sets:setsData,hints:currentHints,timestamp:Date.now()}});});
+    setCurrentHints({});setCurrentSets({});
+    ls.del('wt_current');setSelDay(null);setTab('history');
+  }
 
-  const handleToggleHint = (exId, val) => {
-    setHintsLog(hl => {
-      const cur = (hl[effectiveDay] || {})[exId];
-      const nv = cur === val ? null : val;
-      const nd = { ...hl[effectiveDay] || {} };
-      if (nv === null) delete nd[exId]; else nd[exId] = nv;
-      return { ...hl, [effectiveDay]: nd };
+  function handleToggleHint(exId,val){
+    setHintsLog(function(hl){
+      var cur=(hl[effectiveDay]||{})[exId];
+      var nv=cur===val?null:val;
+      var nd=Object.assign({},hl[effectiveDay]||{});
+      if(nv===null)delete nd[exId];else nd[exId]=nv;
+      return Object.assign({},hl,{[effectiveDay]:nd});
     });
-    setCurrentHints(h => ({ ...h, [exId]: h[exId] === val ? null : val }));
-  };
+    setCurrentHints(function(h){return Object.assign({},h,{[exId]:h[exId]===val?null:val});});
+  }
 
-  const handleDeleteLog = (key) => {
-    const deletedLog = logs[key];
-    if (deletedLog) {
-      const dayType = deletedLog.dayType;
-      const hasOther = Object.keys(logs).some(k => k !== key && logs[k].dayType === dayType);
-      if (!hasOther) {
-        setHintsLog(hl => { const n = { ...hl }; delete n[dayType]; return n; });
-      }
+  function handleDeleteLog(key){
+    var del=logs[key];
+    if(del){
+      var dayType=del.dayType;
+      var hasOther=Object.keys(logs).some(function(k){return k!==key&&logs[k].dayType===dayType;});
+      if(!hasOther)setHintsLog(function(hl){var n=Object.assign({},hl);delete n[dayType];return n;});
     }
-    setLogs(l => { const n = { ...l }; delete n[key]; return n; });
-  };
+    setLogs(function(l){var n=Object.assign({},l);delete n[key];return n;});
+  }
 
-  return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: "'Courier New',monospace", paddingBottom: 80 }}>
+  return h('div',{style:{minHeight:'100vh',background:C.bg,color:C.text,fontFamily:'\'Courier New\',monospace',paddingBottom:80}},
+    videoModal&&h(VideoModal,{exId:videoModal.exId,exName:videoModal.exName,videos:videos,onSave:function(id,url){setVideos(function(v){var n=Object.assign({},v);if(url)n[id]=url;else delete n[id];return n;});},onClose:function(){setVideoModal(null);}}),
+    editModal&&h(EditPlanModal,{planKey:editModal,plan:plan[editModal],onSave:function(key,p){setPlan(function(pl){return Object.assign({},pl,{[key]:p});});},onClose:function(){setEditModal(null);}}),
+    showWeight&&h(WeightLogModal,{weightLog:weightLog,todayK:today,onSave:function(d,v){setWeightLog(function(wl){return Object.assign({},wl,{[d]:v});});},onClose:function(){setShowWeight(false);}}),
+    showTransfer&&h(DataTransferModal,{onClose:function(){setShowTransfer(false);}}),
+    showSync&&h(GitHubSyncModal,{onClose:function(){setShowSync(false);}}),
+    confirmModal&&h(Confirm,{msg:confirmModal.type==='log'?'Видалити це тренування?':'Очистити підхід?',
+      onYes:function(){
+        if(confirmModal.type==='log')handleDeleteLog(confirmModal.key);
+        if(confirmModal.type==='set'){setCurrentSets(function(s){var n=Object.assign({},s);delete n[confirmModal.exIdx+'_'+confirmModal.setIdx];return n;});}
+        setConfirmModal(null);
+      },onNo:function(){setConfirmModal(null);}}),
 
-      {/* Modals */}
-      {videoModal && <VideoModal exId={videoModal.exId} exName={videoModal.exName} videos={videos} onSave={(id, url) => setVideos(v => { const n = { ...v }; if (url) n[id] = url; else delete n[id]; return n; })} onClose={() => setVideoModal(null)} />}
-      {editModal && <EditPlanModal planKey={editModal} plan={plan[editModal]} onSave={(key, p) => setPlan(pl => ({ ...pl, [key]: p }))} onClose={() => setEditModal(null)} />}
-      {showWeightModal && <WeightLogModal weightLog={weightLog} todayK={today} onSave={(d, v) => setWeightLog(wl => ({ ...wl, [d]: v }))} onClose={() => setShowWeightModal(false)} />}
-      {showTransfer && <DataTransferModal onClose={() => setShowTransfer(false)} />}
-      {showSync && <GitHubSyncModal onClose={() => setShowSync(false)} />}
-      {confirmModal && (
-        <Confirm
-          msg={confirmModal.type === 'log' ? 'Видалити це тренування?' : 'Очистити підхід?'}
-          onYes={() => {
-            if (confirmModal.type === 'log') handleDeleteLog(confirmModal.key);
-            if (confirmModal.type === 'set') {
-              setCurrentSets(s => { const n = { ...s }; delete n[`${confirmModal.exIdx}_${confirmModal.setIdx}`]; return n; });
-            }
-            setConfirmModal(null);
-          }}
-          onNo={() => setConfirmModal(null)}
-        />
-      )}
+    // Header
+    h('div',{style:{background:'linear-gradient(135deg,#1a1a2e,#16213e)',borderBottom:'1px solid '+C.border,padding:'16px 20px 14px',position:'sticky',top:0,zIndex:10}},
+      h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+        h('div',null,
+          h('div',{style:{fontSize:11,color:C.muted,letterSpacing:3,textTransform:'uppercase'}},'Fitness Tracker '+VERSION),
+          h('div',{style:{fontSize:20,fontWeight:700,letterSpacing:-1,color:C.text}},
+            'Ціль: ',h('span',{onClick:function(){setShowGoalEdit(function(v){return !v;});},style:{color:C.orange,cursor:'pointer',borderBottom:'1px dashed '+C.orange}},goals.goal+' кг ✏️'))),
+        h('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+          h('button',{onClick:function(){setShowSync(true);},style:{background:'none',border:'1px solid '+C.greenBorder,borderRadius:10,padding:'8px 10px',cursor:'pointer'}},h('span',{style:{fontSize:16}},'☁️')),
+          h('button',{onClick:function(){setShowTransfer(true);},style:{background:'none',border:'1px solid '+C.border,borderRadius:10,padding:'8px 10px',cursor:'pointer'}},h('span',{style:{fontSize:18}},'⇄')),
+          h('button',{onClick:function(){setShowWeight(true);},style:{background:weightRecorded?C.greenBg:C.card,border:'1px solid '+(weightRecorded?C.greenBorder:C.orange),borderRadius:10,padding:'8px 12px',cursor:'pointer',textAlign:'right'}},
+            h('div',{style:{fontSize:10,color:weightRecorded?C.green:C.muted,marginBottom:2}},weightRecorded?'✓ Записано':'📊 Вага сьогодні'),
+            h('div',{style:{fontSize:22,fontWeight:700,color:weightRecorded?C.green:C.orange,letterSpacing:-1}},latestWeight,' ',h('span',{style:{fontSize:13,color:C.muted}},'кг'))))),
+      // Progress bar
+      h('div',{style:{marginTop:10}},
+        h('div',{style:{background:'#2a2a3e',borderRadius:4,height:5,overflow:'hidden'}},
+          h('div',{style:{height:'100%',borderRadius:4,background:'linear-gradient(90deg,'+C.orange+','+C.orangeL+')',width:(latestWeight!=='—'?Math.max(0,Math.min(100,(goals.start-parseFloat(latestWeight))/(goals.start-goals.goal)*100)):0)+'%',transition:'width .5s'}})),
+        h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:10,color:C.muted,marginTop:3}},
+          h('span',null,'Старт: '+goals.start+' кг'),
+          latestWeight!=='—'&&h('span',{style:{color:C.orangeL}},'-'+(goals.start-parseFloat(latestWeight)).toFixed(1)+' кг'),
+          h('span',null,'Ціль: '+goals.goal+' кг'))),
+      // Goal edit
+      showGoalEdit&&h('div',{style:{marginTop:10,background:'#13131f',borderRadius:10,padding:14,border:'1px solid '+C.border}},
+        h('div',{style:{display:'flex',gap:10,alignItems:'center'}},
+          h('div',{style:{flex:1}},h('div',{style:{fontSize:10,color:C.muted,marginBottom:4}},'СТАРТ'),h('input',{type:'number',value:goals.start,onChange:function(e){setGoals(function(g){return Object.assign({},g,{start:Number(e.target.value)});});},style:{width:'100%',background:C.card,border:'1px solid '+C.border,borderRadius:8,color:C.text,padding:8,fontSize:16,textAlign:'center'}})),
+          h('div',{style:{fontSize:18,color:C.muted}},'→'),
+          h('div',{style:{flex:1}},h('div',{style:{fontSize:10,color:C.muted,marginBottom:4}},'ЦІЛЬ'),h('input',{type:'number',value:goals.goal,onChange:function(e){setGoals(function(g){return Object.assign({},g,{goal:Number(e.target.value)});});},style:{width:'100%',background:C.card,border:'1px solid '+C.orange,borderRadius:8,color:C.orange,padding:8,fontSize:16,textAlign:'center',fontWeight:700}}))),
+        h('button',{onClick:function(){setShowGoalEdit(false);},style:{width:'100%',marginTop:10,padding:10,background:'linear-gradient(135deg,'+C.orange+','+C.orangeL+')',border:'none',borderRadius:8,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer'}},'✓ Готово')),
+      // Timer
+      timerSec>0&&h('div',{style:{marginTop:10,background:timerRunning?'#1a2e1a':'#2e1a1a',border:'1px solid '+(timerRunning?C.greenBorder:C.redBorder),borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        h('span',{style:{fontSize:12,color:'#7a9a7a'}},'⏱ Відпочинок'),
+        h('span',{style:{fontSize:24,fontWeight:700,color:timerRunning?'#4aff4a':'#ff4a4a',letterSpacing:2}},Math.floor(timerSec/60)+':'+(timerSec%60<10?'0':'')+timerSec%60),
+        h('button',{onClick:function(){setTimerRunning(false);setTimerSec(0);setTimerEnd(null);},style:{background:'none',border:'none',color:C.muted,cursor:'pointer',fontSize:16}},'✕'))),
 
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#16213e)', borderBottom: `1px solid ${C.border}`, padding: '16px 20px 14px', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 3, textTransform: 'uppercase' }}>Fitness Tracker {VERSION}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -1, color: C.text }}>
-              Ціль: <span onClick={() => setShowGoalEdit(g => !g)} style={{ color: C.orange, cursor: 'pointer', borderBottom: `1px dashed ${C.orange}` }}>{goals.goal} кг ✏️</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button onClick={showDebug} style={{ background: 'none', border: '1px solid #ff6b35', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', fontSize: 10, color: '#ff6b35' }}>
-              🔍
-            </button>
-            <button onClick={() => setShowSync(true)} style={{ background: 'none', border: `1px solid ${C.greenBorder}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
-              <span style={{ fontSize: 16 }}>☁️</span>
-            </button>
-            <button onClick={() => setShowTransfer(true)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
-              <span style={{ fontSize: 18 }}>⇄</span>
-            </button>
-            <button onClick={() => setShowWeightModal(true)} style={{ background: weightRecorded ? C.greenBg : C.card, border: `1px solid ${weightRecorded ? C.greenBorder : C.orange}`, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', textAlign: 'right' }}>
-              <div style={{ fontSize: 10, color: weightRecorded ? C.green : C.muted, marginBottom: 2 }}>{weightRecorded ? '✓ Записано' : '📊 Вага сьогодні'}</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: weightRecorded ? C.green : C.orange, letterSpacing: -1 }}>{latestWeight} <span style={{ fontSize: 13, color: C.muted }}>кг</span></div>
-            </button>
-          </div>
-        </div>
+    // Tabs
+    h('div',{style:{display:'flex',borderBottom:'1px solid '+C.border,background:'#0d0d1a'}},
+      [['today','Сьогодні'],['plan','План'],['history','Історія']].map(function(item){
+        return h('button',{key:item[0],onClick:function(){setTab(item[0]);},style:{flex:1,padding:'12px 0',background:'none',border:'none',borderBottom:tab===item[0]?'2px solid '+C.orange:'2px solid transparent',color:tab===item[0]?C.orange:C.muted,fontSize:12,cursor:'pointer',letterSpacing:1,textTransform:'uppercase'}},item[1]);
+      })),
 
-        {/* Progress bar */}
-        <div style={{ marginTop: 10 }}>
-          <div style={{ background: '#2a2a3e', borderRadius: 4, height: 5, overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 4, background: `linear-gradient(90deg,${C.orange},${C.orangeL})`, width: `${latestWeight !== '—' ? Math.max(0, Math.min(100, (goals.start - parseFloat(latestWeight)) / (goals.start - goals.goal) * 100)) : 0}%`, transition: 'width .5s' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.muted, marginTop: 3 }}>
-            <span>Старт: {goals.start} кг</span>
-            {latestWeight !== '—' && <span style={{ color: C.orangeL }}>-{(goals.start - parseFloat(latestWeight)).toFixed(1)} кг</span>}
-            <span>Ціль: {goals.goal} кг</span>
-          </div>
-        </div>
+    // Content
+    h('div',{style:{padding:16}},
+      tab==='today'&&h('div',null,
+        // Day selector
+        h('div',{style:{marginBottom:16}},
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
+            h('div',{style:{fontSize:11,color:C.muted,letterSpacing:2,textTransform:'uppercase'}},'Тренування'),
+            h('button',{onClick:function(){setSelDay(null);},style:{background:'none',border:'none',cursor:'pointer',fontSize:11,color:selDay?C.orange:C.muted,padding:'2px 6px',borderRadius:6,border:'1px solid '+(selDay?C.orange:'transparent')}},selDay?'✕ авто ('+autoDay+')':' авто: '+autoDay)),
+          h('div',{style:{display:'flex',gap:6}},
+            Object.keys(plan).map(function(dk){
+              var isActive=effectiveDay===dk,isAuto=autoDay===dk&&!selDay;
+              return h('button',{key:dk,onClick:function(){setSelDay(selDay===dk?null:dk);},style:{flex:1,padding:'10px 4px',background:isActive?'linear-gradient(135deg,'+C.orange+','+C.orangeL+')':C.card,border:'1px solid '+(isActive?C.orange:isAuto?'#3a3a5e':C.border),borderRadius:10,color:isActive?'#fff':isAuto?C.text:C.muted,cursor:'pointer',textAlign:'center'}},
+                h('div',{style:{fontSize:16}},plan[dk].emoji),
+                h('div',{style:{fontSize:10,marginTop:2}},dk));
+            }))),
+        todayLog&&!selDay?h('div',{style:{textAlign:'center',padding:'40px 20px'}},
+          h('div',{style:{fontSize:48}},'✅'),
+          h('div',{style:{fontSize:18,fontWeight:700,marginTop:12,color:C.text}},'Тренування виконано!'),
+          h('div',{style:{color:C.muted,marginTop:8}},plan[todayLog.dayType]&&plan[todayLog.dayType].name),
+          h('button',{onClick:function(){setConfirmModal({type:'log',key:today});},style:{marginTop:20,padding:'10px 24px',background:'#2a1a1a',border:'1px solid #5a2a2a',borderRadius:10,color:C.red,cursor:'pointer',fontSize:13}},'🗑 Видалити і зробити заново')):
+        effectiveDay==='rest'?h('div',{style:{textAlign:'center',padding:'40px 20px'}},
+          h('div',{style:{fontSize:48}},'😴'),
+          h('div',{style:{fontSize:18,fontWeight:700,marginTop:12,color:C.text}},'День відпочинку'),
+          h('div',{style:{color:C.muted,marginTop:8}},"М'язи ростуть під час відпочинку 💪"),
+          h('div',{style:{marginTop:20,display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}},
+            Object.keys(plan).map(function(dk){return h('button',{key:dk,onClick:function(){setSelDay(dk);setTab('today');},style:{background:C.card,border:'1px solid '+C.border,borderRadius:8,padding:'8px 14px',color:C.text,cursor:'pointer',fontSize:12}},plan[dk].emoji+' '+dk);}))):
+        h(WorkoutSession,{
+          plan:plan[effectiveDay],dayType:effectiveDay,videos:videos,
+          logSet:function(ei,si,data){setCurrentSets(function(s){return Object.assign({},s,{[ei+'_'+si]:data});});},
+          onFinish:handleFinish,
+          startTimer:function(sec){var end=Date.now()+sec*1000;setTimerEnd(end);setTimerSec(sec);setTimerRunning(true);},
+          onVideoClick:function(id,name){setVideoModal({exId:id,exName:name});},
+          onClearSet:function(ei,si){setConfirmModal({type:'set',exIdx:ei,setIdx:si});},
+          getLastSession:getLastSession,
+          currentHints:currentHints,
+          onToggleHint:handleToggleHint,
+          dayHints:hintsLog[effectiveDay]||{},
+        })),
 
-        {/* Goal edit panel */}
-        {showGoalEdit && (
-          <div style={{ marginTop: 10, background: '#13131f', borderRadius: 10, padding: 14, border: `1px solid ${C.border}` }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>СТАРТ</div>
-                <input type="number" value={goals.start} onChange={e => setGoals(g => ({ ...g, start: Number(e.target.value) }))} style={{ width: '100%', background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: 8, fontFamily: 'inherit', fontSize: 16, textAlign: 'center' }} />
-              </div>
-              <div style={{ fontSize: 18, color: C.muted }}>→</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>ЦІЛЬ</div>
-                <input type="number" value={goals.goal} onChange={e => setGoals(g => ({ ...g, goal: Number(e.target.value) }))} style={{ width: '100%', background: C.card, border: `1px solid ${C.orange}`, borderRadius: 8, color: C.orange, padding: 8, fontFamily: 'inherit', fontSize: 16, textAlign: 'center', fontWeight: 700 }} />
-              </div>
-            </div>
-            <button onClick={() => setShowGoalEdit(false)} style={{ width: '100%', marginTop: 10, padding: 10, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✓ Готово</button>
-          </div>
-        )}
+      tab==='plan'&&h('div',null,
+        h('div',{style:{fontSize:11,color:C.muted,letterSpacing:2,textTransform:'uppercase',marginBottom:16}},'Тижневий розклад'),
+        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:6,marginBottom:24}},
+          WEEK.map(function(day,i){return h('div',{key:i,style:{background:i===weekIdx?'#1e2a1e':C.card,border:'1px solid '+(i===weekIdx?'#2a5a2a':C.border),borderRadius:8,padding:'8px 4px',textAlign:'center'}},
+            h('div',{style:{fontSize:10,color:C.muted}},DAY_NAMES[i]),
+            h('div',{style:{fontSize:16,marginTop:4}},day==='rest'?'😴':plan[day]&&plan[day].emoji),
+            h('div',{style:{fontSize:10,color:day==='rest'?C.muted:C.orangeL,marginTop:2}},day==='rest'?'—':day));})),
+        Object.entries(plan).map(function(entry){var key=entry[0],p=entry[1];return h('div',{key:key,style:{background:C.card,borderRadius:12,padding:16,marginBottom:12,border:'1px solid '+C.border}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+            h('div',{style:{fontWeight:700,fontSize:15,color:C.text}},p.emoji+' '+p.name),
+            h('button',{onClick:function(){setEditModal(key);},style:{background:C.card,border:'1px solid #3a3a5a',borderRadius:8,padding:'5px 12px',color:'#a0a0c0',fontSize:12,cursor:'pointer'}},'✏️ Змінити')),
+          p.exercises.map(function(ex,i){var hasVid=!!videos[ex.id];return h('div',{key:i,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<p.exercises.length-1?'1px solid '+C.border:'none'}},
+            h('span',{style:{flex:1,fontSize:13,color:C.text}},ex.name),
+            h('span',{style:{fontSize:11,color:C.muted}},ex.sets+'×'+ex.reps),
+            hasVid&&h('a',{href:videos[ex.id],target:'_blank',rel:'noreferrer',style:{background:C.greenBg,border:'1px solid '+C.greenBorder,borderRadius:7,padding:'4px 9px',color:C.green,fontSize:12,textDecoration:'none'}},'▶'),
+            h('button',{onClick:function(){setVideoModal({exId:ex.id,exName:ex.name});},style:{background:'none',border:'1px solid '+(hasVid?'transparent':'#3a3a5a'),borderRadius:7,padding:'4px 8px',cursor:'pointer',color:hasVid?'#3a3a5a':C.muted,fontSize:12}},hasVid?'✎':'＋'));})
+        );})),
 
-        {/* Timer */}
-        {timerSec > 0 && (
-          <div style={{ marginTop: 10, background: timerRunning ? '#1a2e1a' : '#2e1a1a', border: `1px solid ${timerRunning ? C.greenBorder : C.redBorder}`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: '#7a9a7a' }}>⏱ Відпочинок</span>
-            <span style={{ fontSize: 24, fontWeight: 700, color: timerRunning ? '#4aff4a' : '#ff4a4a', letterSpacing: 2 }}>{Math.floor(timerSec / 60)}:{String(timerSec % 60).padStart(2, '0')}</span>
-            <button onClick={() => { setTimerRunning(false); setTimerSec(0); setTimerEnd(null); }} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
-          </div>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: '#0d0d1a' }}>
-        {[['today', 'Сьогодні'], ['plan', 'План'], ['history', 'Історія']].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '12px 0', background: 'none', border: 'none', borderBottom: tab === id ? `2px solid ${C.orange}` : '2px solid transparent', color: tab === id ? C.orange : C.muted, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>{label}</button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: 16 }}>
-
-        {/* TODAY TAB */}
-        {tab === 'today' && (
-          <div>
-            {/* Day selector */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Тренування</div>
-                <button onClick={() => setSelDay(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: selDay ? C.orange : C.muted, padding: '2px 6px', borderRadius: 6, border: `1px solid ${selDay ? C.orange : 'transparent'}` }}>
-                  {selDay ? `✕ авто (${autoDay})` : ` авто: ${autoDay}`}
-                </button>
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {Object.keys(plan).map(dk => {
-                  const isActive = effectiveDay === dk;
-                  const isAuto = autoDay === dk && !selDay;
-                  return (
-                    <button key={dk} onClick={() => setSelDay(selDay === dk ? null : dk)}
-                      style={{ flex: 1, padding: '10px 4px', background: isActive ? `linear-gradient(135deg,${C.orange},${C.orangeL})` : C.card, border: `1px solid ${isActive ? C.orange : isAuto ? '#3a3a5e' : C.border}`, borderRadius: 10, color: isActive ? '#fff' : isAuto ? C.text : C.muted, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'center' }}>
-                      <div style={{ fontSize: 16 }}>{plan[dk].emoji}</div>
-                      <div style={{ fontSize: 10, marginTop: 2 }}>{dk}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Workout completed today */}
-            {todayLog && !selDay ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <div style={{ fontSize: 48 }}>✅</div>
-                <div style={{ fontSize: 18, fontWeight: 700, marginTop: 12, color: C.text }}>Тренування виконано!</div>
-                <div style={{ color: C.muted, marginTop: 8 }}>{plan[todayLog.dayType]?.name}</div>
-                <button onClick={() => setConfirmModal({ type: 'log', key: today })} style={{ marginTop: 20, padding: '10px 24px', background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 10, color: C.red, fontFamily: 'inherit', cursor: 'pointer', fontSize: 13 }}>🗑 Видалити і зробити заново</button>
-              </div>
-            ) : effectiveDay === 'rest' ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <div style={{ fontSize: 48 }}>😴</div>
-                <div style={{ fontSize: 18, fontWeight: 700, marginTop: 12, color: C.text }}>День відпочинку</div>
-                <div style={{ color: C.muted, marginTop: 8 }}>М'язи ростуть під час відпочинку 💪</div>
-                <div style={{ marginTop: 20, display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {Object.keys(plan).map(dk => (
-                    <button key={dk} onClick={() => { setSelDay(dk); setTab('today'); }} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', color: C.text, fontFamily: 'inherit', cursor: 'pointer', fontSize: 12 }}>{plan[dk].emoji} {dk}</button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <WorkoutSession
-                plan={plan[effectiveDay]}
-                dayType={effectiveDay}
-                videos={videos}
-                logSet={(exIdx, setIdx, data) => setCurrentSets(s => ({ ...s, [`${exIdx}_${setIdx}`]: data }))}
-                onFinish={handleFinish}
-                startTimer={(sec) => { const end = Date.now() + sec * 1000; setTimerEnd(end); setTimerSec(sec); setTimerRunning(true); }}
-                onVideoClick={(id, name) => setVideoModal({ exId: id, exName: name })}
-                onClearSet={(exIdx, setIdx) => setConfirmModal({ type: 'set', exIdx, setIdx })}
-                getLastSession={getLastSession}
-                currentHints={currentHints}
-                onToggleHint={handleToggleHint}
-                dayHints={hintsLog[effectiveDay] || {}}
-              />
-            )}
-          </div>
-        )}
-
-        {/* PLAN TAB */}
-        {tab === 'plan' && (
-          <div>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>Тижневий розклад</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, marginBottom: 24 }}>
-              {WEEK_SCHEDULE.map((day, i) => (
-                <div key={i} style={{ background: i === weekIdx ? '#1e2a1e' : C.card, border: `1px solid ${i === weekIdx ? '#2a5a2a' : C.border}`, borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: C.muted }}>{DAY_NAMES[i]}</div>
-                  <div style={{ fontSize: 16, marginTop: 4 }}>{day === 'rest' ? '😴' : plan[day]?.emoji}</div>
-                  <div style={{ fontSize: 10, color: day === 'rest' ? C.muted : C.orangeL, marginTop: 2 }}>{day === 'rest' ? '—' : day}</div>
-                </div>
-              ))}
-            </div>
-            {Object.entries(plan).map(([key, p]) => (
-              <div key={key} style={{ background: C.card, borderRadius: 12, padding: 16, marginBottom: 12, border: `1px solid ${C.border}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>{p.emoji} {p.name}</div>
-                  <button onClick={() => setEditModal(key)} style={{ background: C.card, border: '1px solid #3a3a5a', borderRadius: 8, padding: '5px 12px', color: '#a0a0c0', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>✏️ Змінити</button>
-                </div>
-                {p.exercises.map((ex, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: i < p.exercises.length - 1 ? `1px solid ${C.border}` : 'none' }}>
-                    <span style={{ flex: 1, fontSize: 13, color: C.text }}>{ex.name}</span>
-                    <span style={{ fontSize: 11, color: C.muted }}>{ex.sets}×{ex.reps}</span>
-                    {videos[ex.id] && <a href={videos[ex.id]} target="_blank" rel="noreferrer" style={{ background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: 7, padding: '4px 9px', color: C.green, fontSize: 12, textDecoration: 'none' }}>▶</a>}
-                    <button onClick={() => setVideoModal({ exId: ex.id, exName: ex.name })} style={{ background: 'none', border: `1px solid ${videos[ex.id] ? 'transparent' : '#3a3a5a'}`, borderRadius: 7, padding: '4px 8px', cursor: 'pointer', color: videos[ex.id] ? '#3a3a5a' : C.muted, fontSize: 12 }}>{videos[ex.id] ? '✎' : '＋'}</button>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* HISTORY TAB */}
-        {tab === 'history' && (
-          <div>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>Історія тренувань</div>
-            {Object.keys(logs).length === 0 ? (
-              <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>Ще немає записів</div>
-            ) : (
-              Object.keys(logs).sort((a, b) => b.localeCompare(a)).map(date => {
-                const log = logs[date];
-                const p = plan[log.dayType];
-                return (
-                  <div key={date} style={{ background: C.card, borderRadius: 12, padding: 16, marginBottom: 12, border: `1px solid ${C.border}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p?.emoji} {p?.name}</div>
-                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-                          {date}
-                          {weightLog[date] && <span style={{ color: C.orangeL, marginLeft: 8 }}>⚖️ {weightLog[date]} кг</span>}
-                        </div>
-                      </div>
-                      <button onClick={() => setConfirmModal({ type: 'log', key: date })} style={{ background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 8, padding: '5px 10px', color: C.red, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>🗑</button>
-                    </div>
-                    {p?.exercises.map((ex, i) => {
-                      const doneSets = (log.sets?.[i] || []).filter(s => s.weight);
-                      const hint = log.hints?.[ex.id] || null;
-                      if (doneSets.length === 0 && !hint) return null;
-                      return (
-                        <div key={i} style={{ fontSize: 12, padding: '4px 0', display: 'flex', alignItems: 'center', gap: 6, borderBottom: `1px solid ${C.border}` }}>
-                          <span style={{ color: '#a0a0b0', flex: 1 }}>{ex.name}</span>
-                          <span style={{ color: C.orangeL }}>{doneSets.map(s => `${s.weight}кг×${s.reps}`).join(', ')}</span>
-                          {hint && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: hint === 'up' ? C.green : C.red, background: hint === 'up' ? C.greenBg : C.redBg, border: `1px solid ${hint === 'up' ? C.greenBorder : C.redBorder}` }}>{hint === 'up' ? '↑' : '↓'}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
+      tab==='history'&&h('div',null,
+        h('div',{style:{fontSize:11,color:C.muted,letterSpacing:2,textTransform:'uppercase',marginBottom:16}},'Історія тренувань'),
+        Object.keys(logs).length===0?h('div',{style:{textAlign:'center',color:C.muted,padding:40}},'Ще немає записів'):
+        Object.keys(logs).sort(function(a,b){return b.localeCompare(a);}).map(function(date){
+          var log=logs[date],p=plan[log.dayType];
+          return h('div',{key:date,style:{background:C.card,borderRadius:12,padding:16,marginBottom:12,border:'1px solid '+C.border}},
+            h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}},
+              h('div',null,
+                h('div',{style:{fontSize:13,fontWeight:700,color:C.text}},(p&&p.emoji||'')+' '+(p&&p.name||log.dayType)),
+                h('div',{style:{fontSize:11,color:C.muted,marginTop:2}},date,weightLog[date]&&h('span',{style:{color:C.orangeL,marginLeft:8}},'⚖️ '+weightLog[date]+' кг'))),
+              h('button',{onClick:function(){setConfirmModal({type:'log',key:date});},style:{background:'#2a1a1a',border:'1px solid #5a2a2a',borderRadius:8,padding:'5px 10px',color:C.red,fontSize:12,cursor:'pointer'}},'🗑')),
+            p&&p.exercises.map(function(ex,i){
+              var doneSets=(log.sets&&log.sets[i]||[]).filter(function(s){return s.weight;});
+              var hint=(log.hints&&log.hints[ex.id])||null;
+              if(doneSets.length===0&&!hint)return null;
+              return h('div',{key:i,style:{fontSize:12,padding:'4px 0',display:'flex',alignItems:'center',gap:6,borderBottom:'1px solid '+C.border}},
+                h('span',{style:{color:'#a0a0b0',flex:1}},ex.name),
+                h('span',{style:{color:C.orangeL}},doneSets.map(function(s){return s.weight+'кг×'+s.reps;}).join(', ')),
+                hint&&h('span',{style:{fontSize:10,fontWeight:700,padding:'1px 6px',borderRadius:5,color:hint==='up'?C.green:C.red,background:hint==='up'?C.greenBg:C.redBg,border:'1px solid '+(hint==='up'?C.greenBorder:C.redBorder)}},hint==='up'?'↑':'↓'));
+            }));
+        }))));
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
