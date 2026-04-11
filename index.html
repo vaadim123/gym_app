@@ -22,7 +22,45 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v1.6';
+const VERSION = 'v1.6d';
+
+// DEBUG: показати що в localStorage
+function showDebug() {
+  const keys = ['wt_logs', 'wt_current', 'wt_hints_log', 'wt_goals'];
+  let msg = '';
+  keys.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) {
+      try {
+        const parsed = JSON.parse(v);
+        if (k === 'wt_logs') {
+          msg += 'wt_logs keys: ' + Object.keys(parsed).join(', ') + '\n';
+          Object.entries(parsed).forEach(([date, log]) => {
+            const sets = log.sets || {};
+            const totalDone = Object.values(sets).flat().filter(s => s && s.done).length;
+            msg += '  ' + date + ' dayType=' + log.dayType + ' doneSets=' + totalDone + '\n';
+            // Show first exercise sets
+            if (sets[0]) {
+              msg += '  sets[0]: ' + JSON.stringify(sets[0]).slice(0,100) + '\n';
+            }
+          });
+        } else if (k === 'wt_current') {
+          const sets = parsed.sets || {};
+          const filled = Object.entries(sets).filter(([,v]) => v.weight || v.reps || v.done).length;
+          msg += 'wt_current: date=' + parsed.date + ' day=' + parsed.day + ' filledSets=' + filled + '\n';
+          // Show sample
+          const sample = Object.entries(sets).slice(0,3);
+          sample.forEach(([k,v]) => { msg += '  ' + k + ': ' + JSON.stringify(v) + '\n'; });
+        } else {
+          msg += k + ': ' + JSON.stringify(parsed).slice(0, 100) + '\n';
+        }
+      } catch(e) { msg += k + ': parse error\n'; }
+    } else {
+      msg += k + ': (empty)\n';
+    }
+  });
+  alert(msg || 'localStorage порожній');
+}
 
 // ─── COLORS ───────────────────────────────────────────────────────────────────
 const C = {
@@ -811,6 +849,9 @@ function App() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button onClick={showDebug} style={{ background: 'none', border: '1px solid #ff6b35', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', fontSize: 10, color: '#ff6b35' }}>
+              🔍
+            </button>
             <button onClick={() => setShowTransfer(true)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
               <span style={{ fontSize: 18 }}>⇄</span>
             </button>
