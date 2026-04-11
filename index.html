@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v1.6</title>
+<title>Workout v1.7</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v1.6d';
+const VERSION = 'v1.7';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -565,10 +565,10 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
               )}
             </div>
 
-            {/* Hint (standalone - no prev session) */}
-            {vHint && !lastSession && (
-              <div style={{ marginBottom: 8, padding: '5px 10px', background: vHint === 'up' ? C.greenBg : C.redBg, borderRadius: 8, border: `1px solid ${vHint === 'up' ? C.greenBorder : C.redBorder}` }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: vHint === 'up' ? C.green : C.red }}>{vHint === 'up' ? '↑ більше' : '↓ менше'}</span>
+            {/* Hint (standalone - no prev session) - only show if user set it THIS session */}
+            {currentHints[ex.id] && !lastSession && (
+              <div style={{ marginBottom: 8, padding: '5px 10px', background: currentHints[ex.id] === 'up' ? C.greenBg : C.redBg, borderRadius: 8, border: `1px solid ${currentHints[ex.id] === 'up' ? C.greenBorder : C.redBorder}` }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: currentHints[ex.id] === 'up' ? C.green : C.red }}>{currentHints[ex.id] === 'up' ? '↑ більше' : '↓ менше'}</span>
               </div>
             )}
 
@@ -786,7 +786,8 @@ function App() {
     (plan[dayType]?.exercises || []).forEach((ex, i) => {
       setsData[i] = Array.from({ length: ex.sets }, (_, j) => sourceSets[`${i}_${j}`] || { weight: '', reps: '', done: false });
     });
-    setLogs(l => ({ ...l, [sessionDate]: { dayType, sets: setsData, hints: currentHints, timestamp: Date.now() } }));
+    const logKey = sessionDate + (logs[sessionDate] && logs[sessionDate].dayType !== dayType ? '_' + dayType : '');
+    setLogs(l => ({ ...l, [logKey]: { dayType, sets: setsData, hints: currentHints, timestamp: Date.now() } }));
     setCurrentHints({});
     setCurrentSets({});
     ls.del('wt_current');
@@ -1031,7 +1032,7 @@ function App() {
                       <button onClick={() => setConfirmModal({ type: 'log', key: date })} style={{ background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 8, padding: '5px 10px', color: C.red, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>🗑</button>
                     </div>
                     {p?.exercises.map((ex, i) => {
-                      const doneSets = (log.sets?.[i] || []).filter(s => s.done);
+                      const doneSets = (log.sets?.[i] || []).filter(s => s.weight || s.reps || s.done);
                       const hint = log.hints?.[ex.id] || null;
                       if (doneSets.length === 0 && !hint) return null;
                       return (
