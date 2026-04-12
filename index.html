@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v3.3</title>
+<title>Workout v3.4</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v3.3';
+const VERSION = 'v3.4';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -156,14 +156,19 @@ function autoSync() {
   }, 2000);
 }
 async function githubClear(token, owner, repo) {
+  // Save a 'cleared' marker to cloud - all devices will see it and clear themselves
+  const clearTs = Date.now();
+  const marker = JSON.stringify({ wt_cleared: clearTs, wt_sync_ts: clearTs });
+  const content = btoa(unescape(encodeURIComponent(marker)));
+  const hdrs = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' };
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json`;
-  const hdrs = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-  const r = await fetch(url, { headers: hdrs });
-  if (!r.ok) { if (r.status === 404) return { ok: true, msg: '✓ Хмара вже порожня' }; return { ok: false, msg: 'Помилка ' + r.status }; }
-  const j = await r.json();
-  const res = await fetch(url, { method: 'DELETE', headers: { ...hdrs, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'clear data', sha: j.sha }) });
+  let sha = null;
+  try { const r = await fetch(url, { headers: hdrs }); if (r.ok) { const j = await r.json(); sha = j.sha; } } catch {}
+  const body = { message: 'clear all data', content };
+  if (sha) body.sha = sha;
+  const res = await fetch(url, { method: 'PUT', headers: hdrs, body: JSON.stringify(body) });
   if (!res.ok) { const e = await res.json().catch(() => ({})); return { ok: false, msg: 'Помилка ' + res.status + ': ' + (e.message || '') }; }
-  return { ok: true, msg: '✓ Хмара очищена!' };
+  return { ok: true, msg: '✓ Хмара очищена!', clearTs };
 }
 async function githubSave(token, owner, repo) {
   const data = {};
@@ -527,8 +532,9 @@ function GitHubSyncModal({ onClose }) {
             setLoading(true); setStatus(null);
             const res = await githubClear(token, owner, repo);
             if (res.ok) {
-              // Also clear all local data
-              ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_current','wt_sync_ts'].forEach(k => localStorage.removeItem(k));
+              // Clear all local data + save clear timestamp
+              ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_current'].forEach(k => localStorage.removeItem(k));
+              localStorage.setItem('wt_sync_ts', JSON.stringify(res.clearTs));
             }
             setLoading(false); setStatus(res);
             if (res.ok) setTimeout(() => window.location.reload(), 1000);
@@ -898,10 +904,18 @@ function App() {
       const data = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
       const cloudTs = data['wt_sync_ts'] ? JSON.parse(data['wt_sync_ts']) : 0;
       if (cloudTs > localTs) {
-        // Cloud is newer - load it
-        const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_sync_ts'];
-        keys.forEach(k => { if (data[k]) localStorage.setItem(k, data[k]); });
-        window.location.reload();
+        // Check if cloud has a 'cleared' marker
+        if (data['wt_cleared']) {
+          // Someone cleared all data - clear local too
+          ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_current'].forEach(k => localStorage.removeItem(k));
+          localStorage.setItem('wt_sync_ts', JSON.stringify(cloudTs));
+          window.location.reload();
+        } else {
+          // Cloud is newer - load all data
+          const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_sync_ts'];
+          keys.forEach(k => { if (data[k]) localStorage.setItem(k, data[k]); });
+          window.location.reload();
+        }
       }
     }).catch(() => {});
   }, []);
