@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v4.3</title>
+<title>Workout v4.4</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v4.3';
+const VERSION = 'v4.4';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -557,6 +557,64 @@ function GitHubSyncModal({ onClose }) {
 }
 
 // ─── DATA TRANSFER MODAL ──────────────────────────────────────────────────────
+function EditHistoryModal({ logKey, log, plan, onSave, onClose }) {
+  const p = plan[log.dayType];
+  const [sets, setSets] = React.useState(() => {
+    const s = {};
+    (p?.exercises || []).forEach((ex, i) => {
+      s[i] = Array.from({ length: ex.sets }, (_, j) => {
+        const existing = log.sets?.[i]?.[j] || {};
+        return { weight: existing.weight || '', reps: existing.reps || '', done: existing.done || false };
+      });
+    });
+    return s;
+  });
+  function updateSet(ei, si, field, val) {
+    setSets(prev => ({ ...prev, [ei]: prev[ei].map((s, j) => j === si ? { ...s, [field]: val } : s) }));
+  }
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.95)', overflowY: 'auto' }}>
+      <div style={{ background: C.bg, minHeight: '100%', padding: 16, paddingBottom: 40 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2 }}>РЕДАГУВАННЯ ІСТОРІЇ</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>✏️ {p?.name}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{logKey}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
+        </div>
+        {(p?.exercises || []).map((ex, i) => (
+          <div key={i} style={{ background: C.card, borderRadius: 12, padding: 14, marginBottom: 12, border: `1px solid ${C.border}` }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 10 }}>{ex.name}</div>
+            {(sets[i] || []).map((s, j) => (
+              <div key={j} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: C.muted, width: 18, flexShrink: 0 }}>{j + 1}</span>
+                <input value={s.weight} placeholder="кг" inputMode="decimal"
+                  onChange={e => updateSet(i, j, 'weight', e.target.value)}
+                  onFocus={e => e.target.select()}
+                  style={{ width: 55, background: C.inner, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: '6px 4px', fontSize: 16, textAlign: 'center', fontFamily: 'inherit', outline: 'none' }} />
+                <span style={{ color: C.muted, fontSize: 11 }}>кг ×</span>
+                <input value={s.reps} placeholder="повт" inputMode="text"
+                  onChange={e => updateSet(i, j, 'reps', e.target.value)}
+                  onFocus={e => e.target.select()}
+                  style={{ width: 55, background: C.inner, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: '6px 4px', fontSize: 16, textAlign: 'center', fontFamily: 'inherit', outline: 'none' }} />
+                <button onClick={() => updateSet(i, j, 'done', !s.done)}
+                  style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: s.done ? C.greenBg : C.inner, color: s.done ? C.green : C.muted, fontSize: 12, fontFamily: 'inherit' }}>
+                  {s.done ? '✓' : '—'}
+                </button>
+              </div>
+            ))}
+          </div>
+        ))}
+        <button onClick={() => { onSave(logKey, sets); onClose(); }}
+          style={{ width: '100%', padding: 14, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+          💾 Зберегти зміни
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DataTransferModal({ onClose }) {
   const [tab, setTab] = useState('export');
   const [importText, setImportText] = useState('');
