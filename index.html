@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v3.8</title>
+<title>Workout v3.9</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v3.8';
+const VERSION = 'v3.9';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -581,6 +581,19 @@ function DataTransferModal({ onClose }) {
     } catch { setStatus('error'); }
   };
 
+  // Helper: sync after import
+  const doImportAndSync = () => {
+    doImport();
+    const c = getGhCreds();
+    if (c.token && c.owner && c.repo) {
+      setTimeout(() => githubSave(c.token, c.owner, c.repo).then(() => {
+        sessionStorage.removeItem('wt_just_loaded'); window.location.reload();
+      }), 200);
+    } else {
+      setTimeout(() => { sessionStorage.removeItem('wt_just_loaded'); window.location.reload(); }, 800);
+    }
+  };
+
   const doReset = () => {
     if (status === 'confirm') {
       KEYS.forEach(k => localStorage.removeItem(k));
@@ -632,7 +645,7 @@ function DataTransferModal({ onClose }) {
               />
               {status === 'imported' && <div style={{ margin: '8px 0', padding: '10px 12px', background: C.greenBg, borderRadius: 8, fontSize: 12, color: C.green }}>✓ Імпортовано! Перезавантаж сторінку.</div>}
               {status === 'error' && <div style={{ margin: '8px 0', padding: '10px 12px', background: C.redBg, borderRadius: 8, fontSize: 12, color: C.red }}>✗ Помилка — невірний формат</div>}
-              <button onClick={doImport} disabled={!importText}
+              <button onClick={doImportAndSync} disabled={!importText}
                 style={{ width: '100%', marginTop: 8, padding: 12, background: importText ? `linear-gradient(135deg,${C.orange},${C.orangeL})` : '#1a1a2e', border: 'none', borderRadius: 10, color: importText ? '#fff' : C.dim, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: importText ? 'pointer' : 'default' }}>
                 💾 Імпортувати
               </button>
