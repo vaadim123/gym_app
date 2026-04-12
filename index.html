@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v4.1</title>
+<title>Workout v4.3</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v4.1';
+const VERSION = 'v4.3';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -37,7 +37,7 @@ function showDebug() {
           msg += 'wt_logs keys: ' + Object.keys(parsed).join(', ') + '\n';
           Object.entries(parsed).forEach(([date, log]) => {
             const sets = log.sets || {};
-            const totalDone = Object.values(sets).flat().filter(s => s && s.done).length;
+            const totalDone = Object.values(sets).flat().filter(s => s && (s.weight || s.reps)).length;
             msg += '  ' + date + ' dayType=' + log.dayType + ' doneSets=' + totalDone + '\n';
             // Show first exercise sets
             if (sets[0]) {
@@ -707,7 +707,7 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
   };
 
   const totalSets = plan.exercises.reduce((s, e) => s + e.sets, 0);
-  const doneSets = Object.values(sets).filter(s => s.done).length;
+  const doneSets = Object.values(sets).filter(s => s.weight || s.reps).length;
 
   // Build last session cache
   const lastSessions = {};
@@ -790,7 +790,7 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                     style={{ width: 52, background: C.inner, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: '5px 4px', fontFamily: 'inherit', fontSize: 16, textAlign: 'center' }}
                   />
                   <input
-                    placeholder="повт" value={setData.reps} inputMode="numeric" pattern="[0-9]*"
+                    placeholder="повт/сек" value={setData.reps} inputMode="text"
                     onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)}
                     onFocus={e => e.target.select()}
                     onBlur={() => syncToApp(exIdx, setIdx)}
@@ -877,6 +877,7 @@ function App() {
   const [videoModal, setVideoModal] = useState(null);
   const [editModal, setEditModal] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
+  const [editHistoryModal, setEditHistoryModal] = useState(null);
   const [dateOverride, setDateOverride] = useState(null);
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
@@ -982,7 +983,7 @@ function App() {
       if (log.dayType === dayType) {
         const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
         if (exIdx !== -1) {
-          const doneSets = (log.sets?.[exIdx] || []).filter(s => s.weight);
+          const doneSets = (log.sets?.[exIdx] || []).filter(s => s.weight || s.reps);
           if (doneSets.length > 0) {
             return { date, sets: doneSets, hint: (hintsLog[dayType] || {})[exId] || null };
           }
@@ -1050,6 +1051,21 @@ function App() {
       {showWeightModal && <WeightLogModal weightLog={weightLog} todayK={today} onSave={(d, v) => { setWeightLog(wl => ({ ...wl, [d]: v })); autoSync(); }} onClose={() => setShowWeightModal(false)} />}
       {showTransfer && <DataTransferModal onClose={() => setShowTransfer(false)} />}
       {showSync && <GitHubSyncModal onClose={() => setShowSync(false)} />}
+      {editHistoryModal && logs[editHistoryModal] && (
+        <EditHistoryModal
+          logKey={editHistoryModal}
+          log={logs[editHistoryModal]}
+          plan={plan}
+          onSave={(key, newSets) => {
+            const updated = { ...logs[key], sets: newSets };
+            const newLogs = { ...logs, [key]: updated };
+            ls.set('wt_logs', newLogs);
+            setLogs(newLogs);
+            autoSync();
+          }}
+          onClose={() => setEditHistoryModal(null)}
+        />
+      )}
       {confirmModal && (
         <Confirm
           msg={confirmModal.type === 'log' ? 'Видалити це тренування?' : 'Очистити підхід?'}
@@ -1256,16 +1272,18 @@ function App() {
                           {weightLog[date] && <span style={{ color: C.orangeL, marginLeft: 8 }}>⚖️ {weightLog[date]} кг</span>}
                         </div>
                       </div>
-                      <button onClick={() => setConfirmModal({ type: 'log', key: date })} style={{ background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 8, padding: '5px 10px', color: C.red, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>🗑</button>
+                      <button onClick={() => setEditHistoryModal(date)}
+              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 12, cursor: 'pointer' }}>✏️</button>
+                        <button onClick={() => setConfirmModal({ type: 'log', key: date })} style={{ background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 8, padding: '5px 10px', color: C.red, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>🗑</button>
                     </div>
                     {p?.exercises.map((ex, i) => {
-                      const doneSets = (log.sets?.[i] || []).filter(s => s.weight);
+                      const doneSets = (log.sets?.[i] || []).filter(s => s.weight || s.reps);
                       const hint = log.hints?.[ex.id] || null;
                       if (doneSets.length === 0 && !hint) return null;
                       return (
                         <div key={i} style={{ fontSize: 12, padding: '4px 0', display: 'flex', alignItems: 'center', gap: 6, borderBottom: `1px solid ${C.border}` }}>
                           <span style={{ color: '#a0a0b0', flex: 1 }}>{ex.name}</span>
-                          <span style={{ color: C.orangeL }}>{doneSets.map(s => `${s.weight}кг×${s.reps}`).join(', ')}</span>
+                          <span style={{ color: C.orangeL }}>{doneSets.map(s => s.weight&&s.reps?`${s.weight}кг×${s.reps}`:s.weight?`${s.weight}кг`:s.reps||'').join(', ')}</span>
                           {hint && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: hint === 'up' ? C.green : C.red, background: hint === 'up' ? C.greenBg : C.redBg, border: `1px solid ${hint === 'up' ? C.greenBorder : C.redBorder}` }}>{hint === 'up' ? '↑' : '↓'}</span>}
                         </div>
                       );
