@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v4.0</title>
+<title>Workout v4.1</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v4.0';
+const VERSION = 'v4.1';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -190,7 +190,15 @@ async function githubSave(token, owner, repo) {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) {
+  if (res.ok) {
+    try {
+      const saved = await res.json();
+      if (saved.content && saved.content.sha) {
+        localStorage.setItem('wt_cloud_sha', saved.content.sha);
+        console.log('Saved to cloud, SHA:', saved.content.sha);
+      }
+    } catch(e) {}
+  } else {
     const err = await res.json().catch(() => ({}));
     console.error('GitHub save error:', res.status, err.message);
   }
@@ -1001,6 +1009,8 @@ function App() {
     setCurrentSets({});
     ls.del('wt_current');
     setSelDay(null);
+    // Save log directly to localStorage before autoSync (React state is async)
+    ls.set('wt_logs', {...logs, [logKey]: {dayType, sets: setsData, hints: currentHints, timestamp: Date.now()}});
     autoSync();
     setTab('history');
   };
@@ -1025,8 +1035,10 @@ function App() {
         setHintsLog(hl => { const n = { ...hl }; delete n[dayType]; return n; });
       }
     }
-    setLogs(l => { const n = { ...l }; delete n[key]; return n; });
-    setTimeout(autoSync, 100);
+    const newLogs = { ...logs }; delete newLogs[key];
+    ls.set('wt_logs', newLogs);
+    setLogs(newLogs);
+    autoSync();
   };
 
   return (
