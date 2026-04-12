@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v4.4</title>
+<title>Workout v4.5</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v4.4';
+const VERSION = 'v4.5';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -593,7 +593,7 @@ function EditHistoryModal({ logKey, log, plan, onSave, onClose }) {
                   onChange={e => updateSet(i, j, 'weight', e.target.value)}
                   onFocus={e => e.target.select()}
                   style={{ width: 55, background: C.inner, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: '6px 4px', fontSize: 16, textAlign: 'center', fontFamily: 'inherit', outline: 'none' }} />
-                <span style={{ color: C.muted, fontSize: 11 }}>кг ×</span>
+                {s.weight ? <span style={{ color: C.muted, fontSize: 11 }}>кг ×</span> : <span style={{ color: C.muted, fontSize: 11 }}></span>}
                 <input value={s.reps} placeholder="повт" inputMode="text"
                   onChange={e => updateSet(i, j, 'reps', e.target.value)}
                   onFocus={e => e.target.select()}
@@ -1341,7 +1341,7 @@ function App() {
                       return (
                         <div key={i} style={{ fontSize: 12, padding: '4px 0', display: 'flex', alignItems: 'center', gap: 6, borderBottom: `1px solid ${C.border}` }}>
                           <span style={{ color: '#a0a0b0', flex: 1 }}>{ex.name}</span>
-                          <span style={{ color: C.orangeL }}>{doneSets.map(s => s.weight&&s.reps?`${s.weight}кг×${s.reps}`:s.weight?`${s.weight}кг`:s.reps||'').join(', ')}</span>
+                          <span style={{ color: C.orangeL }}>{doneSets.map(s => s.weight&&s.reps?`${s.weight}кг×${s.reps}`:s.weight?`${s.weight}кг`:s.reps?s.reps:'').filter(Boolean).join(', ')}</span>
                           {hint && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: hint === 'up' ? C.green : C.red, background: hint === 'up' ? C.greenBg : C.redBg, border: `1px solid ${hint === 'up' ? C.greenBorder : C.redBorder}` }}>{hint === 'up' ? '↑' : '↓'}</span>}
                         </div>
                       );
