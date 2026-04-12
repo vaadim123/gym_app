@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v3.2</title>
+<title>Workout v3.3</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v3.2';
+const VERSION = 'v3.3';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -526,9 +526,14 @@ function GitHubSyncModal({ onClose }) {
             localStorage.setItem('gh_token', token); localStorage.setItem('gh_owner', owner); localStorage.setItem('gh_repo', repo);
             setLoading(true); setStatus(null);
             const res = await githubClear(token, owner, repo);
+            if (res.ok) {
+              // Also clear all local data
+              ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_current','wt_sync_ts'].forEach(k => localStorage.removeItem(k));
+            }
             setLoading(false); setStatus(res);
+            if (res.ok) setTimeout(() => window.location.reload(), 1000);
           }} disabled={loading} style={{ width: '100%', marginTop: 8, padding: 12, background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 10, color: '#ff6b6b', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            {loading ? '...' : '🗑 Очистити хмару'}
+            {loading ? '...' : '🗑 Очистити хмару і локальні дані'}
           </button>
           <div style={{ marginTop: 12, padding: '10px 12px', background: '#0d0d1a', borderRadius: 8, fontSize: 11, color: '#5a5a7a', lineHeight: 1.6 }}>
             ⚡ Автосинхронізація увімкнена — дані зберігаються в хмару автоматично після кожного тренування та запису ваги.
