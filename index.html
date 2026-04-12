@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v3.7</title>
+<title>Workout v3.8</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v3.7';
+const VERSION = 'v3.8';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -888,27 +888,43 @@ function App() {
   useEffect(() => { ls.set('wt_goals', goals); }, [goals]);
   useEffect(() => { ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
 
-  // On open: ALWAYS load from cloud (cloud = source of truth)
+  // On open: load from cloud, but only if cloud data differs from local
   useEffect(() => {
     const c = { token: localStorage.getItem('gh_token')||'', owner: localStorage.getItem('gh_owner')||'', repo: localStorage.getItem('gh_repo')||'' };
     if (!c.token || !c.owner || !c.repo) return;
+    // Prevent reload loop: mark that we just loaded
+    if (sessionStorage.getItem('wt_just_loaded')) return;
     fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/contents/data.json`, {
       headers: { 'Authorization': `Bearer ${c.token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
     }).then(async r => {
-      if (!r.ok) return; // no cloud data yet - use local
+      if (!r.ok) return;
       const j = await r.json();
       const cloudData = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
-      // Cloud is source of truth - overwrite everything local
       const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log'];
-      keys.forEach(k => {
-        if (cloudData[k]) localStorage.setItem(k, cloudData[k]);
-        else localStorage.removeItem(k);
-      });
-      // Check for cleared marker
+      // Check if anything actually changed
+      let changed = false;
       if (cloudData['wt_cleared']) {
-        keys.forEach(k => localStorage.removeItem(k));
+        keys.forEach(k => { if (localStorage.getItem(k)) changed = true; });
+        if (changed) {
+          keys.forEach(k => localStorage.removeItem(k));
+          sessionStorage.setItem('wt_just_loaded', '1');
+          window.location.reload();
+        }
+        return;
       }
-      window.location.reload();
+      keys.forEach(k => {
+        const local = localStorage.getItem(k);
+        const cloud = cloudData[k] || null;
+        if (cloud !== local) { changed = true; }
+      });
+      if (changed) {
+        keys.forEach(k => {
+          if (cloudData[k]) localStorage.setItem(k, cloudData[k]);
+          else localStorage.removeItem(k);
+        });
+        sessionStorage.setItem('wt_just_loaded', '1');
+        window.location.reload();
+      }
     }).catch(() => {});
   }, []);
 
