@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v3.4</title>
+<title>Workout v3.7</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v3.4';
+const VERSION = 'v3.7';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -150,10 +150,8 @@ function autoSync() {
   if (!c.token || !c.owner || !c.repo) return;
   if (GH_SYNC_TIMER) clearTimeout(GH_SYNC_TIMER);
   GH_SYNC_TIMER = setTimeout(() => {
-    // Save timestamp before syncing so cloud knows when data was saved
-    localStorage.setItem('wt_sync_ts', JSON.stringify(Date.now()));
     githubSave(c.token, c.owner, c.repo);
-  }, 2000);
+  }, 1500);
 }
 async function githubClear(token, owner, repo) {
   // Save a 'cleared' marker to cloud - all devices will see it and clear themselves
@@ -890,33 +888,27 @@ function App() {
   useEffect(() => { ls.set('wt_goals', goals); }, [goals]);
   useEffect(() => { ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
 
-  // Auto-load from GitHub on every open (if token exists)
+  // On open: ALWAYS load from cloud (cloud = source of truth)
   useEffect(() => {
     const c = { token: localStorage.getItem('gh_token')||'', owner: localStorage.getItem('gh_owner')||'', repo: localStorage.getItem('gh_repo')||'' };
     if (!c.token || !c.owner || !c.repo) return;
-    // Check if cloud version is newer than local
-    const localTs = ls.get('wt_sync_ts') || 0;
     fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/contents/data.json`, {
       headers: { 'Authorization': `Bearer ${c.token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
     }).then(async r => {
-      if (!r.ok) return;
+      if (!r.ok) return; // no cloud data yet - use local
       const j = await r.json();
-      const data = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
-      const cloudTs = data['wt_sync_ts'] ? JSON.parse(data['wt_sync_ts']) : 0;
-      if (cloudTs > localTs) {
-        // Check if cloud has a 'cleared' marker
-        if (data['wt_cleared']) {
-          // Someone cleared all data - clear local too
-          ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_current'].forEach(k => localStorage.removeItem(k));
-          localStorage.setItem('wt_sync_ts', JSON.stringify(cloudTs));
-          window.location.reload();
-        } else {
-          // Cloud is newer - load all data
-          const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_sync_ts'];
-          keys.forEach(k => { if (data[k]) localStorage.setItem(k, data[k]); });
-          window.location.reload();
-        }
+      const cloudData = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+      // Cloud is source of truth - overwrite everything local
+      const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log'];
+      keys.forEach(k => {
+        if (cloudData[k]) localStorage.setItem(k, cloudData[k]);
+        else localStorage.removeItem(k);
+      });
+      // Check for cleared marker
+      if (cloudData['wt_cleared']) {
+        keys.forEach(k => localStorage.removeItem(k));
       }
+      window.location.reload();
     }).catch(() => {});
   }, []);
 
@@ -1024,7 +1016,7 @@ function App() {
       {/* Modals */}
       {videoModal && <VideoModal exId={videoModal.exId} exName={videoModal.exName} videos={videos} onSave={(id, url) => setVideos(v => { const n = { ...v }; if (url) n[id] = url; else delete n[id]; return n; })} onClose={() => setVideoModal(null)} />}
       {editModal && <EditPlanModal planKey={editModal} plan={plan[editModal]} onSave={(key, p) => setPlan(pl => ({ ...pl, [key]: p }))} onClose={() => setEditModal(null)} />}
-      {showWeightModal && <WeightLogModal weightLog={weightLog} todayK={today} onSave={(d, v) => { setWeightLog(wl => ({ ...wl, [d]: v })); setTimeout(autoSync, 100); }} onClose={() => setShowWeightModal(false)} />}
+      {showWeightModal && <WeightLogModal weightLog={weightLog} todayK={today} onSave={(d, v) => { setWeightLog(wl => ({ ...wl, [d]: v })); autoSync(); }} onClose={() => setShowWeightModal(false)} />}
       {showTransfer && <DataTransferModal onClose={() => setShowTransfer(false)} />}
       {showSync && <GitHubSyncModal onClose={() => setShowSync(false)} />}
       {confirmModal && (
