@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v4.6</title>
+<title>Workout v5.5</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v4.6';
+const VERSION = 'v5.5';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -140,7 +140,7 @@ const ls = {
 };
 
 // ─── GITHUB SYNC ──────────────────────────────────────────────────────────────
-const SYNC_KEYS = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_sync_ts'];
+const SYNC_KEYS = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_steps','wt_sync_ts'];
 
 // Auto-sync with debounce
 let GH_SYNC_TIMER = null;
@@ -615,6 +615,228 @@ function EditHistoryModal({ logKey, log, plan, onSave, onClose }) {
   );
 }
 
+function StatsModal({ logs, plan, stepsLog, weightLog, onClose }) {
+  const allSets = [];
+  Object.values(logs).forEach(log => {
+    Object.values(log.sets || {}).forEach(setSets => {
+      (setSets || []).forEach(s => { if (s.weight || s.reps) allSets.push(s); });
+    });
+  });
+  const totalWorkouts = Object.keys(logs).length;
+  const totalDone = allSets.filter(s => s.done).length;
+  const totalKg = allSets.filter(s => s.done && s.weight).reduce((sum, s) => sum + (parseFloat(s.weight||0) * (parseInt(s.reps)||1)), 0);
+  const totalSteps = Object.values(stepsLog).reduce((s, v) => s + parseInt(v||0), 0);
+  const avgSteps = Object.keys(stepsLog).length ? Math.round(totalSteps / Object.keys(stepsLog).length) : 0;
+  const weights = Object.entries(weightLog).sort(([a],[b]) => a.localeCompare(b));
+  const weightChange = weights.length >= 2 ? (parseFloat(weights[0][1]) - parseFloat(weights[weights.length-1][1])).toFixed(1) : null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '85vh', overflowY: 'auto', padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Загальна</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>📈 Статистика</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          {[
+            ['🏋️', 'тренувань всього', totalWorkouts],
+            ['✅', 'підходів виконано', totalDone.toLocaleString()],
+            ['⚖️', 'загальний обʼєм', totalKg > 1000 ? (totalKg/1000).toFixed(1)+'т' : Math.round(totalKg).toLocaleString()+'кг'],
+            ['👣', 'середньо кроків', avgSteps.toLocaleString()],
+          ].map(([icon, label, val]) => (
+            <div key={label} style={{ background: C.inner, borderRadius: 12, padding: 16, border: `1px solid ${C.border}`, textAlign: 'center' }}>
+              <div style={{ fontSize: 28 }}>{icon}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.orange, marginTop: 4 }}>{val}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        {weightChange !== null && (
+          <div style={{ background: C.inner, borderRadius: 12, padding: 16, border: `1px solid ${C.border}`, textAlign: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 28 }}>{parseFloat(weightChange) >= 0 ? '📉' : '📈'}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.green, marginTop: 4 }}>-{weightChange} кг</div>
+            <div style={{ fontSize: 12, color: C.text, marginTop: 2 }}>змінилась вага</div>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{weights[0][0]} → {weights[weights.length-1][0]}</div>
+          </div>
+        )}
+        <div style={{ background: C.inner, borderRadius: 12, padding: 14, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10, letterSpacing: 1 }}>ПО ТИПАХ ТРЕНУВАНЬ</div>
+          {Object.keys(plan).map(key => {
+            const count = Object.values(logs).filter(l => l.dayType === key).length;
+            if (!count) return null;
+            const avgDur = Object.values(logs).filter(l => l.dayType === key && l.duration).map(l => l.duration);
+            const avgD = avgDur.length ? Math.round(avgDur.reduce((a,b)=>a+b,0)/avgDur.length) : null;
+            return (
+              <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 13, color: C.text }}>{plan[key].emoji} {plan[key].name.split(' — ')[1] || plan[key].name}</span>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.orangeL }}>{count}x</span>
+                  {avgD && <div style={{ fontSize: 10, color: C.muted }}>⏱ ~{avgD} хв</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepsChart({ stepsLog, days }) {
+  const goal = 10000;
+  const entries = Object.entries(stepsLog).sort(([a],[b]) => a.localeCompare(b));
+  const shown = days ? entries.slice(-days) : entries;
+  if (shown.length < 2) return (
+    <div style={{ textAlign: 'center', color: C.muted, padding: '20px 0', fontSize: 12 }}>Потрібно мінімум 2 записи</div>
+  );
+  const vals = shown.map(([,v]) => parseInt(v) || 0);
+  const maxV = Math.max(...vals, goal);
+  const cx = i => 8 + i / (shown.length - 1) * 284;
+  const cy = v => 102 - v / maxV * 94;
+  const pts = shown.map(([,v],i) => `${cx(i)},${cy(parseInt(v)||0)}`).join(' ');
+  const goalY = cy(goal);
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <svg width={300} height={110} style={{ display: 'block', margin: '0 auto' }}>
+        <defs>
+          <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#4aff7a" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#4aff7a" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1={8} y1={goalY} x2={292} y2={goalY} stroke={C.greenBorder} strokeWidth="1" strokeDasharray="4,3" />
+        <text x={294} y={goalY+3} fontSize="8" fill={C.green}>ціль</text>
+        {[0,0.25,0.5,0.75,1].map(t => (
+          <line key={t} x1={8} y1={8+94*(1-t)} x2={292} y2={8+94*(1-t)} stroke={C.border} strokeWidth="1" strokeDasharray="3,3" />
+        ))}
+        <path d={`M${cx(0)},110 ${shown.map(([,v],i) => `L${cx(i)},${cy(parseInt(v)||0)}`).join(' ')} L${cx(shown.length-1)},110 Z`} fill="url(#sg)" />
+        <polyline points={pts} fill="none" stroke={C.green} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {shown.map(([,v],i) => (
+          <circle key={i} cx={cx(i)} cy={cy(parseInt(v)||0)} r="3" fill={(parseInt(v)||0) >= goal ? C.green : C.orange} stroke={C.bg} strokeWidth="1.5" />
+        ))}
+        <text x={cx(0)} y={cy(vals[0])-7} textAnchor="middle" fontSize="9" fill={C.green}>{vals[0].toLocaleString()}</text>
+        <text x={cx(shown.length-1)} y={cy(vals[vals.length-1])-7} textAnchor="middle" fontSize="9" fill={C.green}>{vals[vals.length-1].toLocaleString()}</text>
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: C.muted, padding: '4px 8px 0' }}>
+        <span>{shown[0][0]}</span><span>{shown[shown.length-1][0]}</span>
+      </div>
+    </div>
+  );
+}
+
+function StepsModal({ stepsLog, todayK, onSave, onClose }) {
+  const last30 = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    return d.toISOString().split('T')[0];
+  });
+  const [tab, setTab] = React.useState('log');
+  const [chartDays, setChartDays] = React.useState(30);
+  const [date, setDate] = React.useState(todayK);
+  const [val, setVal] = React.useState(stepsLog[todayK] || '');
+  const [saved, setSaved] = React.useState(false);
+  const goal = 10000;
+  const todaySteps = stepsLog[todayK] ? parseInt(stepsLog[todayK]) : 0;
+  const pct = Math.min(100, Math.round(todaySteps / goal * 100));
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 20px 0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Активність</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>👣 Кроки за день</div>
+            </div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
+          </div>
+          {todaySteps > 0 && tab === 'log' && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.muted, marginBottom: 4 }}>
+                <span>{todaySteps.toLocaleString()} кроків сьогодні</span>
+                <span>{pct}% від мети</span>
+              </div>
+              <div style={{ background: C.inner, borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: pct + '%', background: pct >= 100 ? C.green : `linear-gradient(90deg,${C.orange},${C.orangeL})`, borderRadius: 4, transition: 'width .3s' }} />
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, marginBottom: 16 }}>
+            {[['log', '📝 Запис'], ['chart', '📈 Графік']].map(([id, label]) => (
+              <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '8px 0', background: 'none', border: 'none', borderBottom: tab === id ? `2px solid ${C.orange}` : '2px solid transparent', color: tab === id ? C.orange : C.muted, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ overflowY: 'auto', padding: '0 20px 28px', flex: 1 }}>
+          {tab === 'log' && (
+            <div>
+              <div style={{ background: C.inner, borderRadius: 12, padding: 14, border: `1px solid ${C.border}`, marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>ДАТА: {date}{date === todayK ? ' · сьогодні' : ''}</div>
+                <input autoFocus type="number" placeholder="10000" value={val}
+                  onChange={e => { setVal(e.target.value); setSaved(false); }}
+                  onClick={e => e.target.select()}
+                  style={{ width: '100%', background: C.card, border: `1px solid ${C.orange}`, borderRadius: 10, color: C.orange, fontSize: 32, fontWeight: 700, padding: '10px 14px', outline: 'none', textAlign: 'center', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                <button onClick={() => { if (val) { onSave(date, val); setSaved(true); } }} disabled={!val}
+                  style={{ width: '100%', marginTop: 12, padding: '12px 0', background: saved ? C.greenBg : val ? `linear-gradient(135deg,${C.orange},${C.orangeL})` : '#1a1a2e', border: saved ? `1px solid ${C.greenBorder}` : 'none', borderRadius: 10, color: saved ? C.green : val ? '#fff' : C.dim, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: val ? 'pointer' : 'default' }}>
+                  {saved ? `✓ Збережено · ${date}` : '💾 Зберегти'}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, marginBottom: 8 }}>ВИБРАТИ ІНШИЙ ДЕНЬ</div>
+              {last30.map(d => {
+                const steps = stepsLog[d] ? parseInt(stepsLog[d]) : 0;
+                const p = Math.min(100, steps / goal * 100);
+                return (
+                  <button key={d} onClick={() => { setDate(d); setVal(stepsLog[d] || ''); setSaved(false); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 12px', marginBottom: 4, background: d === date ? '#1e1e3e' : C.inner, border: `1px solid ${d === date ? C.orange : steps ? '#1a3020' : C.border}`, borderRadius: 8, cursor: 'pointer', boxSizing: 'border-box' }}>
+                    <span style={{ fontSize: 11, color: d === date ? C.orangeL : d === todayK ? C.text : C.muted, width: 90, textAlign: 'left', flexShrink: 0 }}>{d === todayK ? 'Сьогодні' : d}</span>
+                    <div style={{ flex: 1, background: C.border, borderRadius: 3, height: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: p + '%', background: p >= 100 ? C.green : C.orange, borderRadius: 3 }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: steps ? (p >= 100 ? C.green : C.orangeL) : C.dim, width: 70, textAlign: 'right', flexShrink: 0 }}>{steps ? steps.toLocaleString() : '—'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {tab === 'chart' && (
+            Object.keys(stepsLog).length >= 2 ? (
+              <div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                  {[[7, '7 днів'], [30, '30 днів'], [null, 'Весь час']].map(([d, label]) => (
+                    <button key={label} onClick={() => setChartDays(d)} style={{ flex: 1, padding: '7px 4px', background: chartDays === d ? C.card : C.inner, border: `1px solid ${chartDays === d ? C.orange : C.border}`, borderRadius: 8, color: chartDays === d ? C.orange : C.muted, fontFamily: 'inherit', fontSize: 11, cursor: 'pointer', fontWeight: chartDays === d ? 700 : 400 }}>{label}</button>
+                  ))}
+                </div>
+                <div style={{ background: C.inner, borderRadius: 12, padding: '14px 4px 10px', border: `1px solid ${C.border}`, marginBottom: 16 }}>
+                  <StepsChart stepsLog={stepsLog} days={chartDays} />
+                </div>
+                <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, marginBottom: 8 }}>ВСІ ЗАПИСИ</div>
+                {Object.entries(stepsLog).sort(([a],[b]) => b.localeCompare(a)).map(([d, v]) => {
+                  const steps = parseInt(v) || 0;
+                  const p = Math.min(100, steps / goal * 100);
+                  return (
+                    <div key={d} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: C.inner, border: `1px solid ${steps >= goal ? C.greenBorder : C.border}`, borderRadius: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: d === todayK ? C.text : C.muted }}>{d === todayK ? 'Сьогодні · ' : ''}{d}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: steps >= goal ? C.green : C.orangeL }}>{steps.toLocaleString()} 👣</span>
+                        <button onClick={() => { setTab('log'); setDate(d); setVal(v); setSaved(false); }} style={{ background: 'none', border: `1px solid ${C.dim}`, borderRadius: 6, color: C.muted, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11 }}>✎</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: C.muted, padding: '40px 0', fontSize: 13 }}>Додай мінімум 2 записи для графіку</div>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function DataTransferModal({ onClose }) {
   const [tab, setTab] = useState('export');
   const [importText, setImportText] = useState('');
@@ -809,10 +1031,10 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
               )}
             </div>
 
-            {/* Hint (standalone - no prev session data) */}
-            {vHint && !lastSession && (
-              <div style={{ marginBottom: 8, padding: '5px 10px', background: vHint === 'up' ? C.greenBg : C.redBg, borderRadius: 8, border: `1px solid ${vHint === 'up' ? C.greenBorder : C.redBorder}` }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: vHint === 'up' ? C.green : C.red }}>{vHint === 'up' ? '↑ більше' : '↓ менше'}</span>
+            {/* Hint standalone - only show if user set it THIS session */}
+            {currentHints[ex.id] && !lastSession && (
+              <div style={{ marginBottom: 8, padding: '5px 10px', background: currentHints[ex.id] === 'up' ? C.greenBg : C.redBg, borderRadius: 8, border: `1px solid ${currentHints[ex.id] === 'up' ? C.greenBorder : C.redBorder}` }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: currentHints[ex.id] === 'up' ? C.green : C.red }}>{currentHints[ex.id] === 'up' ? '↑ більше' : '↓ менше'}</span>
               </div>
             )}
 
@@ -936,6 +1158,11 @@ function App() {
   const [editModal, setEditModal] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
   const [editHistoryModal, setEditHistoryModal] = useState(null);
+  const [stepsLog, setStepsLog] = useState(() => ls.get('wt_steps') || {});
+  const [showSteps, setShowSteps] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [workoutDate, setWorkoutDate] = useState(null);
+  const [workoutStartTime] = useState(() => Date.now());
   const [dateOverride, setDateOverride] = useState(null);
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
@@ -965,8 +1192,9 @@ function App() {
   useEffect(() => { ls.set('wt_logs', logs); }, [logs]);
   useEffect(() => { ls.set('wt_videos', videos); }, [videos]);
   useEffect(() => { ls.set('wt_weightlog', weightLog); }, [weightLog]);
-  useEffect(() => { ls.set('wt_goals', goals); }, [goals]);
+  useEffect(() => { ls.set('wt_goals', goals); autoSync(); }, [goals]);
   useEffect(() => { ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
+  useEffect(() => { ls.set('wt_steps', stepsLog); }, [stepsLog]);
 
   // On open: check if cloud has newer data (compare SHA)
   useEffect(() => {
@@ -983,7 +1211,7 @@ function App() {
       if (j.sha === lastSha) return;
       // SHA changed - load new data from cloud
       const cloudData = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
-      const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log'];
+      const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_steps'];
       if (cloudData['wt_cleared']) {
         keys.forEach(k => localStorage.removeItem(k));
       } else {
@@ -1075,6 +1303,7 @@ function App() {
   };
 
   const handleToggleHint = (exId, val) => {
+    setTimeout(autoSync, 200);
     setHintsLog(hl => {
       const cur = (hl[effectiveDay] || {})[exId];
       const nv = cur === val ? null : val;
@@ -1104,11 +1333,22 @@ function App() {
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: "'Courier New',monospace", paddingBottom: 80 }}>
 
       {/* Modals */}
-      {videoModal && <VideoModal exId={videoModal.exId} exName={videoModal.exName} videos={videos} onSave={(id, url) => setVideos(v => { const n = { ...v }; if (url) n[id] = url; else delete n[id]; return n; })} onClose={() => setVideoModal(null)} />}
-      {editModal && <EditPlanModal planKey={editModal} plan={plan[editModal]} onSave={(key, p) => setPlan(pl => ({ ...pl, [key]: p }))} onClose={() => setEditModal(null)} />}
+      {videoModal && <VideoModal exId={videoModal.exId} exName={videoModal.exName} videos={videos} onSave={(id, url) => { setVideos(v => { const n = { ...v }; if (url) n[id] = url; else delete n[id]; ls.set('wt_videos', n); return n; }); autoSync(); }} onClose={() => setVideoModal(null)} />}
+      {editModal && <EditPlanModal planKey={editModal} plan={plan[editModal]} onSave={(key, p) => { setPlan(pl => { const n = { ...pl, [key]: p }; ls.set('wt_plan', n); return n; }); autoSync(); }} onClose={() => setEditModal(null)} />}
       {showWeightModal && <WeightLogModal weightLog={weightLog} todayK={today} onSave={(d, v) => { setWeightLog(wl => ({ ...wl, [d]: v })); autoSync(); }} onClose={() => setShowWeightModal(false)} />}
       {showTransfer && <DataTransferModal onClose={() => setShowTransfer(false)} />}
       {showSync && <GitHubSyncModal onClose={() => setShowSync(false)} />}
+      {showStats && (
+        <StatsModal logs={logs} plan={plan} stepsLog={stepsLog} weightLog={weightLog} onClose={() => setShowStats(false)} />
+      )}
+      {showSteps && (
+        <StepsModal
+          stepsLog={stepsLog}
+          todayK={today}
+          onSave={(d, v) => { setStepsLog(sl => ({ ...sl, [d]: v })); autoSync(); }}
+          onClose={() => setShowSteps(false)}
+        />
+      )}
       {editHistoryModal && logs[editHistoryModal] && (
         <EditHistoryModal
           logKey={editHistoryModal}
@@ -1150,6 +1390,12 @@ function App() {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button onClick={showDebug} style={{ background: 'none', border: '1px solid #ff6b35', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', fontSize: 10, color: '#ff6b35' }}>
               🔍
+            </button>
+            <button onClick={() => setShowStats(true)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
+              <span style={{ fontSize: 16 }}>📈</span>
+            </button>
+            <button onClick={() => setShowSteps(true)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
+              <span style={{ fontSize: 16 }}>👣</span>
             </button>
             <button onClick={() => setShowSync(true)} style={{ background: 'none', border: `1px solid ${C.greenBorder}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
               <span style={{ fontSize: 16 }}>☁️</span>
@@ -1221,7 +1467,16 @@ function App() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Тренування</div>
-                <button onClick={() => setSelDay(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: selDay ? C.orange : C.muted, padding: '2px 6px', borderRadius: 6, border: `1px solid ${selDay ? C.orange : 'transparent'}` }}>
+              {workoutDate && workoutDate !== today && (
+                <div style={{ fontSize: 10, color: C.orangeL, marginTop: 2 }}>📅 Записуєш за {workoutDate}</div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: 11, color: C.muted }}>📅</span>
+                <input type='date' value={workoutDate || today}
+                  onChange={e => setWorkoutDate(e.target.value === today ? null : e.target.value)}
+                  style={{ background: 'none', border: `1px solid ${workoutDate && workoutDate !== today ? C.orange : C.border}`, borderRadius: 6, color: workoutDate && workoutDate !== today ? C.orange : C.muted, fontSize: 11, padding: '2px 6px', cursor: 'pointer', fontFamily: 'inherit', colorScheme: 'dark' }} />
+              </div>
+              <button onClick={() => setSelDay(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: selDay ? C.orange : C.muted, padding: '2px 6px', borderRadius: 6, border: `1px solid ${selDay ? C.orange : 'transparent'}` }}>
                   {selDay ? `✕ авто (${autoDay})` : ` авто: ${autoDay}`}
                 </button>
               </div>
@@ -1326,7 +1581,7 @@ function App() {
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p?.emoji} {p?.name}</div>
                         <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-                          {date}
+                          {log.date || date}{log.duration ? <span style={{ marginLeft: 8, color: '#7a7aaa' }}>⏱ {log.duration} хв</span> : null}
                           {weightLog[date] && <span style={{ color: C.orangeL, marginLeft: 8 }}>⚖️ {weightLog[date]} кг</span>}
                         </div>
                       </div>
