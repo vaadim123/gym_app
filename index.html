@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v5.6</title>
+<title>Workout v5.7</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v5.6';
+const VERSION = 'v5.7';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -652,6 +652,76 @@ function EditHistoryModal({ logKey, log, plan, onSave, onClose }) {
           style={{ width: '100%', padding: 14, background: `linear-gradient(135deg,${C.orange},${C.orangeL})`, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           💾 Зберегти зміни
         </button>
+      </div>
+    </div>
+  );
+}
+
+function StatsModal({ logs, plan, stepsLog, weightLog, onClose }) {
+  const allSets = [];
+  Object.values(logs).forEach(log => {
+    Object.values(log.sets || {}).forEach(setSets => {
+      (setSets || []).forEach(s => { if (s.weight || s.reps) allSets.push(s); });
+    });
+  });
+  const totalWorkouts = Object.keys(logs).length;
+  const totalDone = allSets.filter(s => s.done).length;
+  const totalKg = allSets.filter(s => s.done && s.weight).reduce((sum, s) => sum + (parseFloat(s.weight||0) * (parseInt(s.reps)||1)), 0);
+  const totalSteps = Object.values(stepsLog).reduce((s, v) => s + (parseInt(v)||0), 0);
+  const avgSteps = Object.keys(stepsLog).length ? Math.round(totalSteps / Object.keys(stepsLog).length) : 0;
+  const weights = Object.entries(weightLog).sort(([a],[b]) => a.localeCompare(b));
+  const weightChange = weights.length >= 2 ? (parseFloat(weights[0][1]) - parseFloat(weights[weights.length-1][1])).toFixed(1) : null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '85vh', overflowY: 'auto', padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Загальна</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>📈 Статистика</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>✕</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          {[
+            ['🏋️', 'тренувань всього', totalWorkouts],
+            ['✅', 'підходів виконано', totalDone.toLocaleString()],
+            ['⚖️', 'загальний обʼєм', totalKg > 1000 ? (totalKg/1000).toFixed(1)+'т' : Math.round(totalKg).toLocaleString()+'кг'],
+            ['👣', 'середньо кроків', avgSteps.toLocaleString()],
+          ].map(([icon, label, val]) => (
+            <div key={label} style={{ background: C.inner, borderRadius: 12, padding: 16, border: `1px solid ${C.border}`, textAlign: 'center' }}>
+              <div style={{ fontSize: 28 }}>{icon}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.orange, marginTop: 4 }}>{val}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        {weightChange !== null && (
+          <div style={{ background: C.inner, borderRadius: 12, padding: 16, border: `1px solid ${C.border}`, textAlign: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 28 }}>{parseFloat(weightChange) >= 0 ? '📉' : '📈'}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.green, marginTop: 4 }}>-{weightChange} кг</div>
+            <div style={{ fontSize: 12, color: C.text, marginTop: 2 }}>змінилась вага</div>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{weights[0][0]} → {weights[weights.length-1][0]}</div>
+          </div>
+        )}
+        <div style={{ background: C.inner, borderRadius: 12, padding: 14, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10, letterSpacing: 1 }}>ПО ТИПАХ ТРЕНУВАНЬ</div>
+          {Object.keys(plan).map(key => {
+            const count = Object.values(logs).filter(l => l.dayType === key).length;
+            if (!count) return null;
+            const durs = Object.values(logs).filter(l => l.dayType === key && l.duration).map(l => l.duration);
+            const avgDur = durs.length ? Math.round(durs.reduce((a,b)=>a+b,0)/durs.length) : null;
+            return (
+              <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 13, color: C.text }}>{plan[key].emoji} {plan[key].name.split(' — ')[1] || plan[key].name}</span>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.orangeL }}>{count}x</span>
+                  {avgDur && <div style={{ fontSize: 10, color: C.muted }}>⏱ ~{avgDur} хв</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
