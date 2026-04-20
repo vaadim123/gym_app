@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v5.9</title>
+<title>Workout v6.0</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v5.9';
+const VERSION = 'v6.0';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1309,13 +1309,24 @@ function App() {
     for (const date of sortedDates) {
       const log = logs[date];
       if (log.dayType === dayType) {
-        // Try by exercise ID first (new format), then by index (old format)
+        // Try by exercise ID first (new format)
         let doneSets = (log.sets?.[exId] || []).filter(s => s.weight || s.reps);
-        if (doneSets.length === 0) {
-          // Fallback: find by index in the plan at time of that log
-          const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
-          if (exIdx !== -1) {
-            doneSets = (log.sets?.[exIdx] || []).filter(s => s.weight || s.reps);
+        if (doneSets.length === 0 && log.sets) {
+          if (log.exerciseIds) {
+            // Use saved snapshot - only show if this exercise existed in that session
+            const oldIdx = log.exerciseIds.indexOf(exId);
+            if (oldIdx !== -1) doneSets = (log.sets[oldIdx] || []).filter(s => s.weight || s.reps);
+          } else {
+            // Old format without snapshot - only use for original exercises (short IDs like A0, B1)
+            const isOriginal = /^[ABC]\d$/.test(exId);
+            if (isOriginal) {
+              const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
+              const logCount = Object.keys(log.sets).filter(k => !isNaN(k)).length;
+              const planCount = (plan[dayType]?.exercises || []).length;
+              if (exIdx !== -1 && logCount === planCount) {
+                doneSets = (log.sets[exIdx] || []).filter(s => s.weight || s.reps);
+              }
+            }
           }
         }
         if (doneSets.length > 0) {
