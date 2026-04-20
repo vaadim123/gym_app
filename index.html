@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v5.7</title>
+<title>Workout v5.8</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v5.7';
+const VERSION = 'v5.8';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1309,12 +1309,17 @@ function App() {
     for (const date of sortedDates) {
       const log = logs[date];
       if (log.dayType === dayType) {
-        const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
-        if (exIdx !== -1) {
-          const doneSets = (log.sets?.[exIdx] || []).filter(s => s.weight || s.reps);
-          if (doneSets.length > 0) {
-            return { date, sets: doneSets, hint: (hintsLog[dayType] || {})[exId] || null };
+        // Try by exercise ID first (new format), then by index (old format)
+        let doneSets = (log.sets?.[exId] || []).filter(s => s.weight || s.reps);
+        if (doneSets.length === 0) {
+          // Fallback: find by index in the plan at time of that log
+          const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
+          if (exIdx !== -1) {
+            doneSets = (log.sets?.[exIdx] || []).filter(s => s.weight || s.reps);
           }
+        }
+        if (doneSets.length > 0) {
+          return { date, sets: doneSets, hint: (hintsLog[dayType] || {})[exId] || null };
         }
       }
     }
@@ -1330,7 +1335,10 @@ function App() {
       : currentSets;
     const setsData = {};
     (plan[dayType]?.exercises || []).forEach((ex, i) => {
-      setsData[i] = Array.from({ length: ex.sets }, (_, j) => sourceSets[`${i}_${j}`] || { weight: '', reps: '', done: false });
+      // Save by BOTH index (legacy) and exercise ID
+      const setArr = Array.from({ length: ex.sets }, (_, j) => sourceSets[`${i}_${j}`] || { weight: '', reps: '', done: false });
+      setsData[i] = setArr;
+      setsData[ex.id] = setArr; // also save by ID for future lookups
     });
     const logKey = sessionDate + (logs[sessionDate] && logs[sessionDate].dayType !== dayType ? '_' + dayType : '');
     setLogs(l => ({ ...l, [logKey]: { dayType, sets: setsData, hints: currentHints, timestamp: Date.now() } }));
@@ -1641,7 +1649,9 @@ function App() {
                         <button onClick={() => setConfirmModal({ type: 'log', key: date })} style={{ background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 8, padding: '5px 10px', color: C.red, fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>🗑</button>
                     </div>
                     {p?.exercises.map((ex, i) => {
-                      const doneSets = (log.sets?.[i] || []).filter(s => s.weight || s.reps);
+                      // Try by exercise ID first, then by index
+              let doneSets = (log.sets?.[ex.id] || []).filter(s => s.weight || s.reps);
+              if (doneSets.length === 0) doneSets = (log.sets?.[i] || []).filter(s => s.weight || s.reps);
                       const hint = log.hints?.[ex.id] || null;
                       if (doneSets.length === 0 && !hint) return null;
                       return (
