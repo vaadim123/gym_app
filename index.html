@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v6.0</title>
+<title>Workout v6.1</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v6.0';
+const VERSION = 'v6.1';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1238,7 +1238,7 @@ function App() {
   useEffect(() => { ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
   useEffect(() => { ls.set('wt_steps', stepsLog); }, [stepsLog]);
 
-  // On open: check if cloud has newer data (compare SHA)
+  // On open: MERGE cloud data with local (never overwrite, always combine)
   useEffect(() => {
     const c = { token: localStorage.getItem('gh_token')||'', owner: localStorage.getItem('gh_owner')||'', repo: localStorage.getItem('gh_repo')||'' };
     if (!c.token || !c.owner || !c.repo) return;
@@ -1248,23 +1248,52 @@ function App() {
     }).then(async r => {
       if (!r.ok) return;
       const j = await r.json();
+      // Skip if SHA unchanged
       const lastSha = localStorage.getItem('wt_cloud_sha');
-      // If SHA is same as last time we loaded - nothing changed in cloud, skip
       if (j.sha === lastSha) return;
-      // SHA changed - load new data from cloud
       const cloudData = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
-      const keys = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_steps'];
+      // Handle clear marker
       if (cloudData['wt_cleared']) {
-        keys.forEach(k => localStorage.removeItem(k));
-      } else {
-        keys.forEach(k => {
-          if (cloudData[k]) localStorage.setItem(k, cloudData[k]);
-          else localStorage.removeItem(k);
-        });
+        const cloudTs = cloudData['wt_sync_ts'] ? JSON.parse(cloudData['wt_sync_ts']) : 0;
+        const localTs = ls.get('wt_sync_ts') || 0;
+        if (cloudTs > localTs) {
+          ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_steps','wt_current'].forEach(k => localStorage.removeItem(k));
+          localStorage.setItem('wt_sync_ts', JSON.stringify(cloudTs));
+          localStorage.setItem('wt_cloud_sha', j.sha);
+          window.location.reload();
+        }
+        return;
       }
-      // Save SHA so next open we know if cloud changed
+      // MERGE strategy: combine logs from cloud and local
+      let changed = false;
+      // Merge wt_logs - keep ALL entries from both, local wins on same key
+      const localLogs = ls.get('wt_logs') || {};
+      const cloudLogs = cloudData['wt_logs'] ? JSON.parse(cloudData['wt_logs']) : {};
+      const mergedLogs = Object.assign({}, cloudLogs);
+      // Local entries override cloud (local is more recent for same key)
+      Object.keys(localLogs).forEach(k => { mergedLogs[k] = localLogs[k]; });
+      // Add cloud entries that don't exist locally
+      Object.keys(cloudLogs).forEach(k => { if (!localLogs[k]) { mergedLogs[k] = cloudLogs[k]; changed = true; } });
+      if (changed) ls.set('wt_logs', mergedLogs);
+      // Merge wt_weightlog and wt_steps same way
+      ['wt_weightlog', 'wt_steps'].forEach(key => {
+        const local = ls.get(key) || {};
+        const cloud = cloudData[key] ? JSON.parse(cloudData[key]) : {};
+        let merged = Object.assign({}, cloud);
+        Object.keys(local).forEach(k => { merged[k] = local[k]; });
+        Object.keys(cloud).forEach(k => { if (!local[k]) { merged[k] = cloud[k]; changed = true; } });
+        if (changed) ls.set(key, merged);
+      });
+      // For other keys: only update if local is empty
+      ['wt_plan','wt_videos','wt_goals','wt_hints_log'].forEach(k => {
+        if (!localStorage.getItem(k) && cloudData[k]) {
+          localStorage.setItem(k, cloudData[k]); changed = true;
+        }
+      });
       localStorage.setItem('wt_cloud_sha', j.sha);
-      window.location.reload();
+      if (changed) window.location.reload();
+      // Push merged data back to cloud after 5s
+      if (changed) setTimeout(autoSync, 5000);
     }).catch(() => {});
   }, []);
 
