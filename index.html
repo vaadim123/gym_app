@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v6.1</title>
+<title>Workout v6.2</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v6.1';
+const VERSION = 'v6.2';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1380,14 +1380,17 @@ function App() {
       setsData[i] = setArr;
       setsData[ex.id] = setArr; // also save by ID for future lookups
     });
+    // Save exercise ID order for safe historical lookup
+    const exerciseIds = (plan[dayType]?.exercises || []).map(e => e.id);
+    const duration = workoutStartTime ? Math.round((Date.now() - workoutStartTime) / 60000) : null;
     const logKey = sessionDate + (logs[sessionDate] && logs[sessionDate].dayType !== dayType ? '_' + dayType : '');
-    setLogs(l => ({ ...l, [logKey]: { dayType, sets: setsData, hints: currentHints, timestamp: Date.now(), exerciseIds } }));
+    setLogs(l => ({ ...l, [logKey]: { dayType, sets: setsData, hints: currentHints, timestamp: Date.now(), exerciseIds, duration } }));
     setCurrentHints({});
     setCurrentSets({});
     ls.del('wt_current');
     setSelDay(null);
     // Save log directly to localStorage before autoSync (React state is async)
-    ls.set('wt_logs', {...logs, [logKey]: {dayType, sets: setsData, hints: currentHints, timestamp: Date.now(), exerciseIds}});
+    ls.set('wt_logs', {...logs, [logKey]: {dayType, sets: setsData, hints: currentHints, timestamp: Date.now(), exerciseIds, duration}});
     autoSync();
     setTab('history');
   };
