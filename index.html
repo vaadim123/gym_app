@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.0</title>
+<title>Workout v7.1</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.0';
+const VERSION = 'v7.1';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1162,7 +1162,7 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                         }
                         if (newSets[k]) logSet(exIdx, i, newSets[k]);
                       }
-                      startTimer(restSec(ex.rest));
+                      startTimer(parseRestSec(ex.rest));
                     } else {
                       // Single click: find first set with data+not done → mark done → fill next empty
                       let markedIdx = -1;
@@ -1188,7 +1188,7 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                             break;
                           }
                         }
-                        startTimer(restSec(ex.rest));
+                        startTimer(parseRestSec(ex.rest));
                       }
                     }
                     setSets(newSets); ls.set('wt_current', { sets: newSets, date: todayKey(), dayType });
