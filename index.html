@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v6.7</title>
+<title>Workout v6.8</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v6.7';
+const VERSION = 'v6.8';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1125,7 +1125,11 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                     {setData.done ? '✓ Зроблено' : 'Виконати'}
                   </button>
                   {hasData && (
-                    <button onClick={() => { const key = `${exIdx}_${setIdx}`; setSets(s => { const n = { ...s }; delete n[key]; return n; }); onClearSet(exIdx, setIdx); }}
+                    <button onClick={() => onClearSet(exIdx, setIdx, () => {
+                        setSets(s => { const n = { ...s }; delete n[key]; return n; });
+                        const ns = { ...setsRef.current }; delete ns[key];
+                        ls.set('wt_current', { sets: ns, date: todayKey(), dayType });
+                      })}
                       style={{ background: 'none', border: '1px solid #3a2a2a', borderRadius: 6, color: '#7a4a4a', padding: '5px 7px', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>✕</button>
                   )}
                 </div>
@@ -1151,14 +1155,13 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                         const k = `${exIdx}_${i}`;
                         const s = newSets[k];
                         if (!s?.weight && !s?.reps && !s?.done) {
-                          // Empty: fill with last data and mark done
                           newSets[k] = { weight: w, reps: r, done: true };
                         } else if (s && (s.weight || s.reps) && !s.done) {
-                          // Has data but not done: just mark done, keep existing data
                           newSets[k] = { ...s, done: true };
                         }
-                        logSet(exIdx, i, newSets[k]);
+                        if (newSets[k]) logSet(exIdx, i, newSets[k]);
                       }
+                      startTimer(restSec(ex.rest));
                     } else {
                       // Single click: fill next empty set with previous set data + mark as done
                       let prevSet = null;
@@ -1515,6 +1518,8 @@ function App() {
           onYes={() => {
             if (confirmModal.type === 'log') handleDeleteLog(confirmModal.key);
             if (confirmModal.type === 'set') {
+              // Signal WorkoutSession to clear the set via a callback
+              if (confirmModal.onConfirm) confirmModal.onConfirm();
               setCurrentSets(s => { const n = { ...s }; delete n[`${confirmModal.exIdx}_${confirmModal.setIdx}`]; return n; });
             }
             setConfirmModal(null);
@@ -1669,7 +1674,7 @@ function App() {
                 onFinish={handleFinish}
                 startTimer={(sec) => { const end = Date.now() + sec * 1000; setTimerEnd(end); setTimerSec(sec); setTimerRunning(true); }}
                 onVideoClick={(id, name) => setVideoModal({ exId: id, exName: name })}
-                onClearSet={(exIdx, setIdx) => setConfirmModal({ type: 'set', exIdx, setIdx })}
+                onClearSet={(exIdx, setIdx, onConfirm) => setConfirmModal({ type: 'set', exIdx, setIdx, onConfirm })}
                 getLastSession={getLastSession}
                 currentHints={currentHints}
                 onToggleHint={handleToggleHint}
