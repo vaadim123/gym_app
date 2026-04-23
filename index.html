@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v6.8</title>
+<title>Workout v6.9</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v6.8';
+const VERSION = 'v6.9';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1163,23 +1163,31 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                       }
                       startTimer(restSec(ex.rest));
                     } else {
-                      // Single click: fill next empty set with previous set data + mark as done
-                      let prevSet = null;
+                      // Single click: find first set with data+not done → mark done → fill next empty
+                      let markedIdx = -1;
+                      let markedSet = null;
                       for (let i = 0; i < ex.sets; i++) {
                         const k = `${exIdx}_${i}`;
                         const s = newSets[k];
-                        if (s && (s.weight || s.reps)) {
-                          // Mark current filled set as done
-                          if (!s.done) {
-                            newSets[k] = { ...s, done: true };
-                            logSet(exIdx, i, newSets[k]);
-                          }
-                          prevSet = s;
-                        } else if (prevSet) {
-                          newSets[k] = { ...newSets[k], weight: prevSet.weight, reps: prevSet.reps };
+                        if (s && (s.weight || s.reps) && !s.done) {
+                          newSets[k] = { ...s, done: true };
                           logSet(exIdx, i, newSets[k]);
+                          markedIdx = i;
+                          markedSet = s;
                           break;
                         }
+                      }
+                      if (markedSet) {
+                        for (let i = markedIdx + 1; i < ex.sets; i++) {
+                          const k = `${exIdx}_${i}`;
+                          const s = newSets[k];
+                          if (!s?.weight && !s?.reps && !s?.done) {
+                            newSets[k] = { weight: markedSet.weight, reps: markedSet.reps, done: false };
+                            logSet(exIdx, i, newSets[k]);
+                            break;
+                          }
+                        }
+                        startTimer(restSec(ex.rest));
                       }
                     }
                     setSets(newSets); ls.set('wt_current', { sets: newSets, date: todayKey(), dayType });
