@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v6.9</title>
+<title>Workout v7.0</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v6.9';
+const VERSION = 'v7.0';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1126,8 +1126,9 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                   </button>
                   {hasData && (
                     <button onClick={() => onClearSet(exIdx, setIdx, () => {
-                        setSets(s => { const n = { ...s }; delete n[key]; return n; });
-                        const ns = { ...setsRef.current }; delete ns[key];
+                        const delKey = `${exIdx}_${setIdx}`;
+                        setSets(s => { const n = { ...s }; delete n[delKey]; return n; });
+                        const ns = { ...setsRef.current }; delete ns[delKey];
                         ls.set('wt_current', { sets: ns, date: todayKey(), dayType });
                       })}
                       style={{ background: 'none', border: '1px solid #3a2a2a', borderRadius: 6, color: '#7a4a4a', padding: '5px 7px', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>✕</button>
