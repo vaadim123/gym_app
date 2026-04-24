@@ -3,11 +3,15 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.2</title>
+<title>Workout v7.3</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -20,9 +24,33 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-<script type="text/babel">
+<script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/gym_app/sw.js").catch(function(){});
+    }
+    function requestNotifPermission() {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+    document.addEventListener("click", requestNotifPermission, { once: true });
+    window.sendTimerNotification = function() {
+      if ("vibrate" in navigator) navigator.vibrate([300, 100, 300, 100, 500]);
+      if ("Notification" in window && Notification.permission === "granted") {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: "TIMER_DONE" });
+        } else {
+          new Notification("💪 Час відпочинку вийшов!", {
+            body: "Починай наступний підхід",
+            tag: "timer"
+          });
+        }
+      }
+    };
+    </script>
+    <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.2';
+const VERSION = 'v7.3';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1359,7 +1387,10 @@ function App() {
         const remaining = Math.ceil((timerEnd - Date.now()) / 1000);
         if (remaining <= 0) { setTimerSec(0); setTimerRunning(false); setTimerEnd(null);
               // Vibrate on timer end: 3 short pulses
-              if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+              window.sendTimerNotification();
+              if ('Notification' in window && Notification.permission === 'granted') {
+                try { new Notification('Час відпочинку вийшов!', { body: 'Починай наступний підхід', silent: false }); } catch(e) {}
+              }
             }
         else setTimerSec(remaining);
       }
@@ -1375,7 +1406,10 @@ function App() {
         const remaining = Math.ceil((timerEnd - Date.now()) / 1000);
         if (remaining <= 0) { setTimerSec(0); setTimerRunning(false); setTimerEnd(null);
               // Vibrate on timer end: 3 short pulses
-              if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+              window.sendTimerNotification();
+              if ('Notification' in window && Notification.permission === 'granted') {
+                try { new Notification('Час відпочинку вийшов!', { body: 'Починай наступний підхід', silent: false }); } catch(e) {}
+              }
             }
         else setTimerSec(remaining);
       }, 500);
