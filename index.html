@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.3</title>
+<title>Workout v7.4</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.3';
+const VERSION = 'v7.4';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1172,11 +1172,12 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                   onClick={() => {
                     const now = Date.now();
                     const last = lastFillClick.current[exIdx] || 0;
-                    const isDouble = (now - last) < 400;
                     lastFillClick.current[exIdx] = now;
-                    const newSets = { ...setsRef.current };
-                    if (isDouble) {
-                      // Double click: fill EMPTY sets with last filled data + mark ALL as done
+
+                    if ((now - last) < 400) {
+                      // Double click — fill all empty sets with last filled data + mark all done
+                      clearTimeout(lastFillClick.current[`timer_${exIdx}`]);
+                      const newSets = { ...setsRef.current };
                       const lastFilled = Array.from({ length: ex.sets }, (_, i) => newSets[`${exIdx}_${i}`])
                         .filter(s => s && (s.weight || s.reps)).slice(-1)[0];
                       const w = lastFilled?.weight || ''; const r = lastFilled?.reps || '';
@@ -1191,35 +1192,41 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                         if (newSets[k]) logSet(exIdx, i, newSets[k]);
                       }
                       startTimer(parseRestSec(ex.rest));
+                      setSets(newSets); ls.set('wt_current', { sets: newSets, date: todayKey(), dayType });
                     } else {
-                      // Single click: find first set with data+not done → mark done → fill next empty
-                      let markedIdx = -1;
-                      let markedSet = null;
-                      for (let i = 0; i < ex.sets; i++) {
-                        const k = `${exIdx}_${i}`;
-                        const s = newSets[k];
-                        if (s && (s.weight || s.reps) && !s.done) {
-                          newSets[k] = { ...s, done: true };
-                          logSet(exIdx, i, newSets[k]);
-                          markedIdx = i;
-                          markedSet = s;
-                          break;
-                        }
-                      }
-                      if (markedSet) {
-                        for (let i = markedIdx + 1; i < ex.sets; i++) {
+                      // Single click — delay to wait for possible second click
+                      lastFillClick.current[`timer_${exIdx}`] = setTimeout(() => {
+                        const newSets = { ...setsRef.current };
+                        // Find first set with data but not done → mark done
+                        let markedIdx = -1;
+                        let markedSet = null;
+                        for (let i = 0; i < ex.sets; i++) {
                           const k = `${exIdx}_${i}`;
                           const s = newSets[k];
-                          if (!s?.weight && !s?.reps && !s?.done) {
-                            newSets[k] = { weight: markedSet.weight, reps: markedSet.reps, done: false };
+                          if (s && (s.weight || s.reps) && !s.done) {
+                            newSets[k] = { ...s, done: true };
                             logSet(exIdx, i, newSets[k]);
+                            markedIdx = i;
+                            markedSet = s;
                             break;
                           }
                         }
-                        startTimer(parseRestSec(ex.rest));
-                      }
+                        // Fill next empty set
+                        if (markedSet) {
+                          for (let i = markedIdx + 1; i < ex.sets; i++) {
+                            const k = `${exIdx}_${i}`;
+                            const s = newSets[k];
+                            if (!s?.weight && !s?.reps && !s?.done) {
+                              newSets[k] = { weight: markedSet.weight, reps: markedSet.reps, done: false };
+                              logSet(exIdx, i, newSets[k]);
+                              break;
+                            }
+                          }
+                          startTimer(parseRestSec(ex.rest));
+                        }
+                        setSets(newSets); ls.set('wt_current', { sets: newSets, date: todayKey(), dayType });
+                      }, 350);
                     }
-                    setSets(newSets); ls.set('wt_current', { sets: newSets, date: todayKey(), dayType });
                   }}
                   disabled={!firstFilled}
                   style={{ flex: 1, padding: '7px 4px', background: firstFilled ? C.card : '#111118', border: `1px solid ${firstFilled ? C.orangeL : C.border}`, borderRadius: 8, color: firstFilled ? C.orangeL : C.dim, fontFamily: 'inherit', fontSize: 11, cursor: firstFilled ? 'pointer' : 'default', textAlign: 'center', lineHeight: 1.3 }}>
