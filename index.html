@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.7</title>
+<title>Workout v7.8</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.7';
+const VERSION = 'v7.8';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -139,6 +139,17 @@ const DEFAULT_PLAN = {
       { id: 'C6', name: 'Скручування на римській лавці', sets: 3, reps: '15-20', rest: '45 сек' },
       { id: 'C7', name: 'Mountain climbers', sets: 3, reps: '30 сек', rest: '30 сек' },
       { id: 'C8', name: 'Бічна планка', sets: 3, reps: '35 сек/сторону', rest: '30 сек' },
+    ]
+  },
+  D: {
+    name: 'Щодня — 🧘 Правильна постава', emoji: '🧘',
+    exercises: [
+      { id: 'D0', name: 'Кіт-корова (Cat-Cow)', sets: 1, reps: '10', rest: '30 сек' },
+      { id: 'D1', name: 'Зведення лопаток', sets: 3, reps: '15', rest: '30 сек' },
+      { id: 'D2', name: 'Підтягування підборіддя (Chin tuck)', sets: 3, reps: '10', rest: '30 сек' },
+      { id: 'D3', name: 'Розтяжка грудей у дверях', sets: 2, reps: '30 сек', rest: '30 сек' },
+      { id: 'D4', name: 'Кути біля стіни (Wall angels)', sets: 3, reps: '10', rest: '30 сек' },
+      { id: 'D5', name: 'Планка', sets: 3, reps: '30 сек', rest: '30 сек' },
     ]
   },
 };
@@ -1452,7 +1463,7 @@ function App() {
             if (oldIdx !== -1) doneSets = (log.sets[oldIdx] || []).filter(s => s.weight || s.reps);
           } else {
             // Old format without snapshot - only use for original exercises (short IDs like A0, B1)
-            const isOriginal = /^[ABC]\d$/.test(exId);
+            const isOriginal = /^[ABCD]\d$/.test(exId);
             if (isOriginal) {
               const exIdx = (plan[dayType]?.exercises || []).findIndex(e => e.id === exId);
               const logCount = Object.keys(log.sets).filter(k => !isNaN(k)).length;
@@ -1690,7 +1701,7 @@ function App() {
                 </button>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                {Object.keys(plan).map(dk => {
+                {Object.keys(plan).filter(dk => dk !== 'D').map(dk => {
                   const isActive = effectiveDay === dk;
                   const isAuto = autoDay === dk && !selDay;
                   return (
@@ -1701,6 +1712,19 @@ function App() {
                     </button>
                   );
                 })}
+                <div style={{ width: 1, background: C.border, borderRadius: 1, margin: '4px 0' }} />
+                {(() => {
+                  const dk = 'D';
+                  const isActive = effectiveDay === dk;
+                  const doneToday = Object.keys(logs).some(k => k.startsWith(today) && logs[k].dayType === 'D');
+                  return (
+                    <button key={dk} onClick={() => setSelDay(selDay === dk ? null : dk)}
+                      style={{ flex: 1, padding: '10px 4px', background: isActive ? `linear-gradient(135deg,#2a7a4a,#4aaf6a)` : doneToday ? C.greenBg : C.card, border: `1px solid ${isActive ? C.green : doneToday ? C.greenBorder : C.border}`, borderRadius: 10, color: isActive ? '#fff' : doneToday ? C.green : C.muted, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'center' }}>
+                      <div style={{ fontSize: 16 }}>{plan[dk].emoji}{doneToday && !isActive ? ' ✓' : ''}</div>
+                      <div style={{ fontSize: 10, marginTop: 2 }}>щодня</div>
+                    </button>
+                  );
+                })()}
               </div>
             </div>
 
@@ -1718,9 +1742,10 @@ function App() {
                 <div style={{ fontSize: 18, fontWeight: 700, marginTop: 12, color: C.text }}>День відпочинку</div>
                 <div style={{ color: C.muted, marginTop: 8 }}>М'язи ростуть під час відпочинку 💪</div>
                 <div style={{ marginTop: 20, display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {Object.keys(plan).map(dk => (
+                  {Object.keys(plan).filter(dk => dk !== 'D').map(dk => (
                     <button key={dk} onClick={() => { setSelDay(dk); setTab('today'); }} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', color: C.text, fontFamily: 'inherit', cursor: 'pointer', fontSize: 12 }}>{plan[dk].emoji} {dk}</button>
                   ))}
+                  <button onClick={() => { setSelDay('D'); setTab('today'); }} style={{ background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: 8, padding: '8px 14px', color: C.green, fontFamily: 'inherit', cursor: 'pointer', fontSize: 12 }}>🧘 щодня</button>
                 </div>
               </div>
             ) : (
