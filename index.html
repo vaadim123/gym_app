@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.9</title>
+<title>Workout v8.0</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.9';
+const VERSION = 'v8.0';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1453,6 +1453,11 @@ function App() {
   const latestWeight = todayWeight || Object.entries(weightLog).sort(([a], [b]) => b.localeCompare(a))[0]?.[1] || '—';
   const weightRecorded = !!weightLog[today];
   const todayLog = logs[today];
+  // gym done today = autoDay session exists today (D doesn't block gym)
+  const gymLogEntry = autoDay !== 'rest'
+    ? Object.entries(logs).find(([k, l]) => k.startsWith(today) && l.dayType === autoDay)
+    : null;
+  const gymLogKey = gymLogEntry?.[0] || today;
 
   const getLastSession = (exId, dayType) => {
     const sortedDates = Object.keys(logs).sort((a, b) => b.localeCompare(a));
@@ -1504,7 +1509,10 @@ function App() {
     // Save exercise ID order for safe historical lookup
     const exerciseIds = (plan[dayType]?.exercises || []).map(e => e.id);
     const duration = workoutStartTime ? Math.round((Date.now() - workoutStartTime) / 60000) : null;
-    const logKey = sessionDate + (logs[sessionDate] && logs[sessionDate].dayType !== dayType ? '_' + dayType : '');
+    // Find a free key for this session: prefer base date, add _dayType if taken by another dayType
+    const existingKey = Object.keys(logs).find(k => k.startsWith(sessionDate) && logs[k].dayType === dayType);
+    const baseKey = sessionDate;
+    const logKey = existingKey || (logs[baseKey] && logs[baseKey].dayType !== dayType ? baseKey + '_' + dayType : baseKey);
     setLogs(l => ({ ...l, [logKey]: { dayType, sets: setsData, hints: currentHints, timestamp: Date.now(), exerciseIds, duration } }));
     setCurrentHints({});
     setCurrentSets({});
@@ -1734,12 +1742,12 @@ function App() {
             </div>
 
             {/* Workout completed today */}
-            {todayLog && !selDay ? (
+            {gymLogEntry && !selDay ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <div style={{ fontSize: 48 }}>✅</div>
                 <div style={{ fontSize: 18, fontWeight: 700, marginTop: 12, color: C.text }}>Тренування виконано!</div>
-                <div style={{ color: C.muted, marginTop: 8 }}>{plan[todayLog.dayType]?.name}</div>
-                <button onClick={() => setConfirmModal({ type: 'log', key: today })} style={{ marginTop: 20, padding: '10px 24px', background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 10, color: C.red, fontFamily: 'inherit', cursor: 'pointer', fontSize: 13 }}>🗑 Видалити і зробити заново</button>
+                <div style={{ color: C.muted, marginTop: 8 }}>{plan[gymLogEntry[1].dayType]?.name}</div>
+                <button onClick={() => setConfirmModal({ type: 'log', key: gymLogKey })} style={{ marginTop: 20, padding: '10px 24px', background: '#2a1a1a', border: '1px solid #5a2a2a', borderRadius: 10, color: C.red, fontFamily: 'inherit', cursor: 'pointer', fontSize: 13 }}>🗑 Видалити і зробити заново</button>
               </div>
             ) : effectiveDay === 'rest' ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
