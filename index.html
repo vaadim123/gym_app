@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v8.0</title>
+<title>Workout v8.1</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v8.0';
+const VERSION = 'v8.1';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1289,7 +1289,13 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App() {
-  const [plan, setPlan] = useState(() => ls.get('wt_plan') || DEFAULT_PLAN);
+  const [plan, setPlan] = useState(() => {
+    const stored = ls.get('wt_plan');
+    if (!stored) return DEFAULT_PLAN;
+    // merge new default days missing from stored plan (e.g. D added in v7.8)
+    Object.entries(DEFAULT_PLAN).forEach(([k, v]) => { if (!stored[k]) stored[k] = v; });
+    return stored;
+  });
   const [logs, setLogs] = useState(() => ls.get('wt_logs') || {});
   const [videos, setVideos] = useState(() => ls.get('wt_videos') || {});
   const [weightLog, setWeightLog] = useState(() => ls.get('wt_weightlog') || {});
