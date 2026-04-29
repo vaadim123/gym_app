@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.5</title>
+<title>Workout v7.6</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.5';
+const VERSION = 'v7.6';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1171,19 +1171,21 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                 <button
                   onClick={() => {
                     const newSets = { ...setsRef.current };
-                    // Find first set with data but not done → mark done + fill next empty
+                    // Find last set with data (regardless of done) → mark done + fill next empty
                     let markedIdx = -1;
                     let markedSet = null;
                     for (let i = 0; i < ex.sets; i++) {
                       const k = `${exIdx}_${i}`;
                       const s = newSets[k];
-                      if (s && (s.weight || s.reps) && !s.done) {
-                        newSets[k] = { ...s, done: true };
-                        logSet(exIdx, i, newSets[k]);
+                      if (s && (s.weight || s.reps)) {
                         markedIdx = i;
                         markedSet = s;
-                        break;
                       }
+                    }
+                    if (markedIdx !== -1) {
+                      const k = `${exIdx}_${markedIdx}`;
+                      newSets[k] = { ...markedSet, done: true };
+                      logSet(exIdx, markedIdx, newSets[k]);
                     }
                     if (markedSet) {
                       for (let i = markedIdx + 1; i < ex.sets; i++) {
