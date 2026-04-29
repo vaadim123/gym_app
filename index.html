@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.6</title>
+<title>Workout v7.7</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.6';
+const VERSION = 'v7.7';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1188,13 +1188,23 @@ function WorkoutSession({ plan, dayType, videos, logSet, onFinish, startTimer, o
                       logSet(exIdx, markedIdx, newSets[k]);
                     }
                     if (markedSet) {
+                      let filledIdx = -1;
                       for (let i = markedIdx + 1; i < ex.sets; i++) {
                         const k = `${exIdx}_${i}`;
                         const s = newSets[k];
                         if (!s?.weight && !s?.reps && !s?.done) {
-                          newSets[k] = { weight: markedSet.weight, reps: markedSet.reps, done: false };
+                          newSets[k] = { weight: markedSet.weight, reps: markedSet.reps, done: true };
                           logSet(exIdx, i, newSets[k]);
+                          filledIdx = i;
                           break;
+                        }
+                      }
+                      const upTo = filledIdx !== -1 ? filledIdx : markedIdx;
+                      for (let i = 0; i <= upTo; i++) {
+                        const k = `${exIdx}_${i}`;
+                        if (newSets[k] && (newSets[k].weight || newSets[k].reps) && !newSets[k].done) {
+                          newSets[k] = { ...newSets[k], done: true };
+                          logSet(exIdx, i, newSets[k]);
                         }
                       }
                       startTimer(parseRestSec(ex.rest));
