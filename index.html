@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v7.8</title>
+<title>Workout v7.9</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v7.8';
+const VERSION = 'v7.9';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -699,8 +699,13 @@ function EditHistoryModal({ logKey, log, plan, onSave, onClose }) {
 function StatsModal({ logs, plan, stepsLog, weightLog, onClose }) {
   const allSets = [];
   Object.values(logs).forEach(log => {
-    Object.values(log.sets || {}).forEach(setSets => {
-      (setSets || []).forEach(s => { if (s.weight || s.reps) allSets.push(s); });
+    const sets = log.sets || {};
+    const keys = Object.keys(sets);
+    // sets stored by both ID ("B0") and index ("0") for compat — use only one to avoid double count
+    const hasIdKeys = keys.some(k => isNaN(k));
+    keys.forEach(key => {
+      if (hasIdKeys && !isNaN(key)) return;
+      (sets[key] || []).forEach(s => { if (s.weight || s.reps) allSets.push(s); });
     });
   });
   const totalWorkouts = Object.keys(logs).length;
