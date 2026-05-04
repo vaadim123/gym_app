@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v8.1</title>
+<title>Workout v8.2</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v8.1';
+const VERSION = 'v8.2';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -177,6 +177,26 @@ const ls = {
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   del: (k) => { try { localStorage.removeItem(k); } catch {} },
 };
+
+// ─── COOKIE BACKUP FOR GH CREDENTIALS ────────────────────────────────────────
+const GH_CRED_KEYS = ['gh_token','gh_owner','gh_repo'];
+function saveCookie(name, value) {
+  const exp = new Date(Date.now() + 365 * 86400000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${exp};path=/;SameSite=Strict`;
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|;)\\s*' + name + '=([^;]+)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function restoreGhCredsFromCookies() {
+  GH_CRED_KEYS.forEach(k => {
+    if (!localStorage.getItem(k)) {
+      const v = getCookie(k);
+      if (v) localStorage.setItem(k, v);
+    }
+  });
+}
+restoreGhCredsFromCookies();
 
 // ─── GITHUB SYNC ──────────────────────────────────────────────────────────────
 const SYNC_KEYS = ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_steps','wt_sync_ts'];
@@ -511,6 +531,9 @@ function GitHubSyncModal({ onClose }) {
     localStorage.setItem('gh_token', token);
     localStorage.setItem('gh_owner', owner);
     localStorage.setItem('gh_repo', repo);
+    saveCookie('gh_token', token);
+    saveCookie('gh_owner', owner);
+    saveCookie('gh_repo', repo);
   };
 
   const handleSave = async () => {
@@ -574,6 +597,7 @@ function GitHubSyncModal({ onClose }) {
           <button onClick={async () => {
             if (!token || !owner || !repo) { setStatus({ ok: false, msg: 'Заповни всі поля' }); return; }
             localStorage.setItem('gh_token', token); localStorage.setItem('gh_owner', owner); localStorage.setItem('gh_repo', repo);
+            saveCookie('gh_token', token); saveCookie('gh_owner', owner); saveCookie('gh_repo', repo);
             setLoading(true); setStatus(null);
             const res = await githubClear(token, owner, repo);
             if (res.ok) {
