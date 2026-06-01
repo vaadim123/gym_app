@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v8.4</title>
+<title>Workout v8.5</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v8.4';
+const VERSION = 'v8.5';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -230,36 +230,52 @@ async function githubClear(token, owner, repo) {
 async function githubSave(token, owner, repo) {
   const data = {};
   SYNC_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-  
-  // Get current file SHA (needed for update)
+  const hdrs = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+
+  // Fetch current cloud (for SHA and safe merge — single request)
   let sha = null;
+  let cloudSnapshot = null;
   try {
-    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
-    });
-    if (r.ok) { const j = await r.json(); sha = j.sha; }
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, { headers: hdrs });
+    if (r.ok) {
+      const j = await r.json();
+      sha = j.sha;
+      cloudSnapshot = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+    }
   } catch {}
-  
+
+  // Safe merge: if local key is missing or empty, preserve cloud value
+  if (cloudSnapshot && !cloudSnapshot['wt_cleared']) {
+    ['wt_videos', 'wt_hints_log'].forEach(k => {
+      const localParsed = data[k] ? (() => { try { return JSON.parse(data[k]); } catch { return {}; } })() : {};
+      if (Object.keys(localParsed).length === 0 && cloudSnapshot[k]) {
+        const cp = (() => { try { return JSON.parse(cloudSnapshot[k]); } catch { return {}; } })();
+        if (Object.keys(cp).length > 0) data[k] = cloudSnapshot[k];
+      }
+    });
+    // Additive merge for logs/weight/steps: cloud base + local overrides
+    ['wt_logs', 'wt_weightlog', 'wt_steps'].forEach(k => {
+      const local = data[k] ? (() => { try { return JSON.parse(data[k]); } catch { return {}; } })() : {};
+      const cloud = cloudSnapshot[k] ? (() => { try { return JSON.parse(cloudSnapshot[k]); } catch { return {}; } })() : {};
+      const merged = Object.assign({}, cloud, local);
+      if (Object.keys(merged).length > 0) data[k] = JSON.stringify(merged);
+    });
+  }
+
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
   const body = { message: 'sync workout data', content };
   if (sha) body.sha = sha;
-  
+
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
     method: 'PUT',
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
+    headers: { ...hdrs, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
   if (res.ok) {
     try {
       const saved = await res.json();
-      if (saved.content && saved.content.sha) {
-        localStorage.setItem('wt_cloud_sha', saved.content.sha);
-        console.log('Saved to cloud, SHA:', saved.content.sha);
-      }
+      if (saved.content && saved.content.sha) localStorage.setItem('wt_cloud_sha', saved.content.sha);
     } catch(e) {}
-  } else {
-    const err = await res.json().catch(() => ({}));
-    console.error('GitHub save error:', res.status, err.message);
   }
   return res.ok;
 }
@@ -1431,8 +1447,11 @@ function App() {
       const cloudTs = cloudData['wt_sync_ts'] ? JSON.parse(cloudData['wt_sync_ts']) : 0;
       const localTs = ls.get('wt_sync_ts') || 0;
       ['wt_plan','wt_videos','wt_goals','wt_hints_log'].forEach(k => {
-        if (!localStorage.getItem(k) && cloudData[k]) {
-          // Not present locally - take from cloud
+        // Check if local has actual entries (not just an empty object "{}")
+        const localVal = localStorage.getItem(k);
+        const localIsEmpty = !localVal || (() => { try { const p = JSON.parse(localVal); return typeof p === 'object' && Object.keys(p).length === 0; } catch { return false; } })();
+        if (localIsEmpty && cloudData[k]) {
+          // Not present or empty locally - take from cloud
           localStorage.setItem(k, cloudData[k]); changed = true;
         } else if (cloudData[k] && cloudTs > localTs) {
           // Cloud is newer - update local
