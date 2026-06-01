@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v8.3</title>
+<title>Workout v8.4</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v8.3';
+const VERSION = 'v8.4';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -1362,14 +1362,14 @@ function App() {
     return merged;
   });
 
-  // Persist to localStorage
+  // Persist to localStorage — guard: never overwrite with empty state (protects against race with cloud restore)
   useEffect(() => { ls.set('wt_plan', plan); }, [plan]);
-  useEffect(() => { ls.set('wt_logs', logs); }, [logs]);
-  useEffect(() => { ls.set('wt_videos', videos); }, [videos]);
-  useEffect(() => { ls.set('wt_weightlog', weightLog); }, [weightLog]);
+  useEffect(() => { if (Object.keys(logs).length > 0) ls.set('wt_logs', logs); }, [logs]);
+  useEffect(() => { if (Object.keys(videos).length > 0) ls.set('wt_videos', videos); }, [videos]);
+  useEffect(() => { if (Object.keys(weightLog).length > 0) ls.set('wt_weightlog', weightLog); }, [weightLog]);
   useEffect(() => { ls.set('wt_goals', goals); autoSync(); }, [goals]);
-  useEffect(() => { ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
-  useEffect(() => { ls.set('wt_steps', stepsLog); }, [stepsLog]);
+  useEffect(() => { if (Object.keys(hintsLog).length > 0) ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
+  useEffect(() => { if (Object.keys(stepsLog).length > 0) ls.set('wt_steps', stepsLog); }, [stepsLog]);
 
   // On open: MERGE cloud data with local (never overwrite, always combine)
   useEffect(() => {
@@ -1398,6 +1398,16 @@ function App() {
         return;
       }
       // MERGE strategy: combine logs from cloud and local
+      // If localStorage was cleared by iOS, force reload immediately with cloud data
+      const localEmpty = !localStorage.getItem('wt_logs') && !localStorage.getItem('wt_plan');
+      if (localEmpty) {
+        ['wt_plan','wt_logs','wt_videos','wt_weightlog','wt_goals','wt_hints_log','wt_steps'].forEach(k => {
+          if (cloudData[k]) localStorage.setItem(k, cloudData[k]);
+        });
+        localStorage.setItem('wt_cloud_sha', j.sha);
+        window.location.reload();
+        return;
+      }
       let changed = false;
       // Merge wt_logs - keep ALL entries from both, local wins on same key
       const localLogs = ls.get('wt_logs') || {};
