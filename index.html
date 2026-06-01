@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Workout"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Workout v8.5</title>
+<title>Workout v8.6</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0a0a0f; font-family: 'Courier New', monospace; color: #e8e6e0; overscroll-behavior: none; -webkit-text-size-adjust: none; }
@@ -50,7 +50,7 @@
     </script>
     <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const VERSION = 'v8.5';
+const VERSION = 'v8.6';
 
 // DEBUG: показати що в localStorage
 function showDebug() {
@@ -276,6 +276,8 @@ async function githubSave(token, owner, repo) {
       const saved = await res.json();
       if (saved.content && saved.content.sha) localStorage.setItem('wt_cloud_sha', saved.content.sha);
     } catch(e) {}
+    localStorage.setItem('wt_last_sync_ok', Date.now().toString());
+    window.dispatchEvent(new Event('wt-sync-ok'));
   }
   return res.ok;
 }
@@ -566,8 +568,11 @@ function GitHubSyncModal({ onClose }) {
     save(); setLoading(true); setStatus(null);
     const ok = await githubLoad(token, owner, repo);
     setLoading(false);
-    if (ok) { setStatus({ ok: true, msg: '✓ Завантажено! Оновлення...' }); setTimeout(() => window.location.reload(), 800); }
-    else { setStatus({ ok: false, msg: '✗ Файл не знайдено. Спочатку збережи дані.' }); }
+    if (ok) {
+      localStorage.setItem('wt_last_sync_ok', Date.now().toString());
+      setStatus({ ok: true, msg: '✓ Завантажено! Оновлення...' });
+      setTimeout(() => window.location.reload(), 800);
+    } else { setStatus({ ok: false, msg: '✗ Файл не знайдено. Спочатку збережи дані.' }); }
   };
 
   const inputStyle = { width: '100%', background: '#0d0d1a', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: '10px 12px', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box', marginBottom: 10 };
@@ -1358,6 +1363,10 @@ function App() {
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [showSync, setShowSync] = useState(false);
+  const [lastSyncOk, setLastSyncOk] = useState(() => {
+    const v = localStorage.getItem('wt_last_sync_ok');
+    return v ? parseInt(v) : null;
+  });
   const [goals, setGoals] = useState(() => ls.get('wt_goals') || { start: 99, goal: 85 });
   const [showGoalEdit, setShowGoalEdit] = useState(false);
   const [selDay, setSelDay] = useState(() => {
@@ -1386,6 +1395,13 @@ function App() {
   useEffect(() => { ls.set('wt_goals', goals); autoSync(); }, [goals]);
   useEffect(() => { if (Object.keys(hintsLog).length > 0) ls.set('wt_hints_log', hintsLog); }, [hintsLog]);
   useEffect(() => { if (Object.keys(stepsLog).length > 0) ls.set('wt_steps', stepsLog); }, [stepsLog]);
+
+  // Listen for successful sync events (from autoSync / manual save)
+  useEffect(() => {
+    const handler = () => setLastSyncOk(Date.now());
+    window.addEventListener('wt-sync-ok', handler);
+    return () => window.removeEventListener('wt-sync-ok', handler);
+  }, []);
 
   // On open: MERGE cloud data with local (never overwrite, always combine)
   useEffect(() => {
@@ -1672,6 +1688,23 @@ function App() {
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#16213e)', borderBottom: `1px solid ${C.border}`, padding: '16px 20px 14px', position: 'sticky', top: 0, zIndex: 10 }}>
+        {/* Sync warning banner */}
+        {(() => {
+          const hasToken = !!localStorage.getItem('gh_token');
+          const syncAgeMin = lastSyncOk ? Math.floor((Date.now() - lastSyncOk) / 60000) : null;
+          const isStale = !hasToken || syncAgeMin === null || syncAgeMin > 1440;
+          if (!isStale) return null;
+          const msg = !hasToken
+            ? '⚠️ Немає токена — дані не зберігаються в хмару! Натисни ☁️ і додай GitHub токен.'
+            : syncAgeMin === null
+              ? '⚠️ Ще не синхронізовано — натисни ☁️ → Зберегти'
+              : `⚠️ Не синхронізовано вже ${Math.floor(syncAgeMin/1440)} дн — натисни ☁️ → Зберегти`;
+          return (
+            <div onClick={() => setShowSync(true)} style={{ cursor: 'pointer', background: '#3a1500', border: '1px solid #8b3500', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#ff9944', lineHeight: 1.4 }}>
+              {msg}
+            </div>
+          );
+        })()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 11, color: C.muted, letterSpacing: 3, textTransform: 'uppercase' }}>Fitness Tracker {VERSION}</div>
@@ -1689,9 +1722,24 @@ function App() {
             <button onClick={() => setShowSteps(true)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
               <span style={{ fontSize: 16 }}>👣</span>
             </button>
-            <button onClick={() => setShowSync(true)} style={{ background: 'none', border: `1px solid ${C.greenBorder}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
-              <span style={{ fontSize: 16 }}>☁️</span>
-            </button>
+            {/* Cloud sync button with live status */}
+            {(() => {
+              const hasToken = !!localStorage.getItem('gh_token');
+              const syncAgeMin = lastSyncOk ? Math.floor((Date.now() - lastSyncOk) / 60000) : null;
+              const bad = !hasToken || syncAgeMin === null || syncAgeMin > 1440;
+              const warn = hasToken && syncAgeMin !== null && syncAgeMin > 60 && syncAgeMin <= 1440;
+              const label = !hasToken ? 'немає токена'
+                : syncAgeMin === null ? 'не збережено'
+                : syncAgeMin < 60 ? `${syncAgeMin}хв тому`
+                : syncAgeMin < 1440 ? `${Math.floor(syncAgeMin/60)}год тому`
+                : `${Math.floor(syncAgeMin/1440)}дн тому`;
+              return (
+                <button onClick={() => setShowSync(true)} style={{ background: bad ? '#3a1500' : warn ? '#2a2500' : C.greenBg, border: `1px solid ${bad ? '#8b3500' : warn ? '#7a6500' : C.greenBorder}`, borderRadius: 10, padding: '5px 8px', cursor: 'pointer', textAlign: 'center', minWidth: 58 }}>
+                  <div style={{ fontSize: 15 }}>☁️{bad ? '⚠️' : ''}</div>
+                  <div style={{ fontSize: 9, color: bad ? '#ff9944' : warn ? '#ffcc44' : C.green, marginTop: 1, whiteSpace: 'nowrap' }}>{label}</div>
+                </button>
+              );
+            })()}
             <button onClick={() => setShowTransfer(true)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 10px', cursor: 'pointer' }}>
               <span style={{ fontSize: 18 }}>⇄</span>
             </button>
